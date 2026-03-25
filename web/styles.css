@@ -403,6 +403,37 @@ body {
   font-size: 0.92em;
 }
 
+.reader-image-block {
+  padding: 0.75rem 1rem 0;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.reader-b64-img {
+  max-width: 100%;
+  max-height: min(50vh, 420px);
+  height: auto;
+  image-rendering: auto;
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.08);
+}
+
+.reader-b64-caption {
+  margin: 0.5rem 1rem 0.25rem;
+  font-size: 12px;
+  color: #8ab898;
+  line-height: 1.4;
+}
+
+.reader-text--raw-b64 {
+  margin-top: 0.25rem;
+  max-height: min(28vh, 200px);
+  font-size: 11px;
+  line-height: 1.4;
+  color: #9aa8b0;
+  word-break: break-all;
+}
+
 /* Ending screen */
 .end-screen {
   position: fixed;

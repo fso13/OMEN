@@ -10,6 +10,7 @@ import {
   decodeHexUtf8,
   reverseText,
 } from "./decodeUtils";
+import { htmlForPossibleBase64Image } from "./imageReader";
 
 export interface ShellState {
   cwd: string;
@@ -437,10 +438,15 @@ export function execLine(
       if (!fileExists(files, target)) {
         push("cat: нет файла: " + target, "err");
       } else {
+        const body = files[target];
+        const imgHtml = htmlForPossibleBase64Image(body);
         return {
           nextState: next,
           lines,
-          reader: { title: target, html: glitchHtml(files[target]) },
+          reader: {
+            title: target,
+            html: imgHtml ?? glitchHtml(body),
+          },
         };
       }
     }

@@ -10,6 +10,7 @@ import {
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { clearSavedGame, loadGame, saveGame, type PersistedGameV1 } from "./persist";
+import { EndEmailStream } from "./EndEmailStream";
 import "../styles.css";
 
 function getInitialFromStorage(): {
@@ -311,8 +312,9 @@ export function App() {
 
       {endScreen.visible && (
         <div className="end-screen">
-          <div className="end-panel">
+          <div className="end-panel end-panel--with-stream">
             <pre className="end-text">{endScreen.text}</pre>
+            <EndEmailStream />
             <button
               type="button"
               className="end-btn"

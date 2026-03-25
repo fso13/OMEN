@@ -16,9 +16,9 @@ import {
   ISKIN_QUESTION_IDS,
   type IskinQuestionId,
   iskinAnswerLines,
-  iskinIntroLines,
   iskinMenuLines,
   iskinPreludeDoneMessage,
+  iskinStartLines,
 } from "./iskinDialog";
 
 export interface ShellState {
@@ -28,6 +28,8 @@ export interface ShellState {
   pendingSu?: boolean;
   /** Прочитан cat'ом revelation.txt — можно начать диалог с Искином. */
   revelationRead?: boolean;
+  /** Игрок вызвал iskin start и видел вступление + список вопросов. */
+  iskinDialogStarted?: boolean;
   /** Номера заданных вопросов (1–5), не более ISKIN_MAX_QUESTIONS. */
   iskinDialogAskedIds?: number[];
   /** После iskin done — разрешён iskin judge. */
@@ -436,7 +438,7 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, decode, su, exit",
-        "  iskin ask N, iskin done, iskin judge --live | --purge  (после revelation и диалога)",
+        "  iskin start → iskin ask N (до трёх), iskin done → iskin judge --live | --purge",
         "  __test_iskin_dialog — тест диалога; __test_end_live / __test_end_purge — тест финала",
         "  У любой команды: -help или --help (например: cat --help)",
         // "  ls -a — скрытые файлы; ls -l — подробный список",
@@ -528,10 +530,11 @@ export function execLine(
     push("exit: нет родительской сессии (заглушка)");
   } else if (cmd === "__test_iskin_dialog") {
     next.revelationRead = true;
+    next.iskinDialogStarted = false;
     next.iskinDialogAskedIds = undefined;
     next.iskinDialogFinished = false;
     push(
-      "[тест] revelation помечен прочитанным — начните диалог: iskin ask 1 … iskin ask 5 (до трёх), затем iskin done и iskin judge.",
+      "[тест] revelation помечен прочитанным — iskin start, затем iskin ask до трёх раз, iskin done, iskin judge.",
       "normal"
     );
   } else if (cmd === "__test_end_live" || cmd === "__test_end_purge") {
@@ -546,10 +549,21 @@ export function execLine(
     });
   } else if (cmd === "iskin") {
     const sub = (args[1] || "").toLowerCase();
-    if (sub === "ask") {
+    if (sub === "start") {
+      if (!next.revelationRead) {
+        push("iskin start: сначала прочитайте /opt/contract-omen/.vault/revelation.txt (cat).", "err");
+      } else if (next.iskinDialogFinished) {
+        push("iskin start: диалог уже завершён — используйте iskin judge.", "err");
+      } else {
+        next.iskinDialogStarted = true;
+        iskinStartLines().forEach((line) => push(line));
+      }
+    } else if (sub === "ask") {
       const n = parseInt(args[2] || "", 10);
       if (!next.revelationRead) {
         push("iskin ask: сначала прочитайте /opt/contract-omen/.vault/revelation.txt (cat).", "err");
+      } else if (!next.iskinDialogStarted) {
+        push("iskin ask: сначала прочитайте вступление и список вопросов: iskin start", "err");
       } else if (!Number.isFinite(n) || n < 1 || n > 5) {
         push("iskin ask: укажите номер вопроса 1…5: iskin ask N", "err");
       } else {
@@ -566,10 +580,6 @@ export function execLine(
               "err"
             );
           } else {
-            const isFirst = asked.length === 0;
-            if (isFirst) {
-              iskinIntroLines().forEach((line) => push(line));
-            }
             next.iskinDialogAskedIds = [...asked, n];
             iskinAnswerLines(qid).forEach((line) => push(line));
             if (next.iskinDialogAskedIds.length >= ISKIN_MAX_QUESTIONS) {
@@ -584,6 +594,8 @@ export function execLine(
     } else if (sub === "done") {
       if (!next.revelationRead) {
         push("iskin done: сначала прочитайте revelation.txt.", "err");
+      } else if (!next.iskinDialogStarted) {
+        push("iskin done: сначала прочитайте вступление: iskin start", "err");
       } else {
         next.iskinDialogFinished = true;
         const asked = next.iskinDialogAskedIds ?? [];
@@ -597,7 +609,7 @@ export function execLine(
         push("iskin judge: сначала прочитайте revelation.txt (cat).", "err");
       } else if (!next.iskinDialogFinished) {
         push(
-          "iskin judge: сначала поговорите с Искином: iskin ask N (до трёх вопросов из пяти) или iskin done.",
+          "iskin judge: завершите диалог — iskin start, затем iskin ask (до трёх) или iskin done.",
           "err"
         );
       } else {
@@ -629,7 +641,7 @@ export function execLine(
         push("iskin judge: укажите --live или --purge", "err");
       }
     } else {
-      push("iskin: подкоманды: ask, done, judge. См. iskin --help", "err");
+      push("iskin: подкоманды: start, ask, done, judge. См. iskin --help", "err");
     }
   } else {
     push(cmd + ": команда не найдена", "err");

@@ -16,6 +16,9 @@ export function getCommandHelp(cmd: string, args: string[]): string | null {
   if (c === "iskin" && iskinSub === "judge") {
     return manIskinJudge();
   }
+  if (c === "iskin" && iskinSub === "start") {
+    return manIskinStart();
+  }
   if (c === "iskin" && iskinSub === "ask") {
     return manIskinAsk();
   }
@@ -234,13 +237,28 @@ function manIskin(): string {
     block("ИМЯ", "iskin — диалог с Искином и финальный суд."),
     block(
       "СИНТАКСИС",
-      `iskin ask N     — вопрос по номеру 1…5 (не более трёх за сессию)
+      `iskin start     — вступление и список из пяти вопросов (сначала это)
+iskin ask N       — ответ Искина на вопрос по номеру (не более трёх за сессию)
 iskin done        — завершить диалог и открыть iskin judge
-iskin judge --live | --purge  — после revelation и iskin done`
+iskin judge --live | --purge  — после revelation и завершения диалога`
     ),
     block(
       "ОПИСАНИЕ",
-      "После cat revelation.txt Искин доступен в терминале. Свои вопросы вводить нельзя — только выбор из пяти номеров. Справки: iskin ask --help, iskin done --help, iskin judge --help"
+      "После cat revelation.txt: сначала iskin start, чтобы прочитать вступление и список, затем iskin ask N. Справки: iskin start --help, iskin ask --help..."
+    ),
+    LINE,
+  ].join("\n");
+}
+
+function manIskinStart(): string {
+  return [
+    header("iskin start"),
+    LINE,
+    block("ИМЯ", "iskin start — вступительный текст Искина и нумерованный список вопросов."),
+    block("СИНТАКСИС", "iskin start"),
+    block(
+      "ОПИСАНИЕ",
+      "Перед первым iskin ask нужно прочитать этот вывод. Требуется cat revelation.txt."
     ),
     LINE,
   ].join("\n");
@@ -254,7 +272,7 @@ function manIskinAsk(): string {
     block("СИНТАКСИС", "iskin ask N   где N — 1, 2, 3, 4 или 5"),
     block(
       "ОПИСАНИЕ",
-      "Можно задать не более трёх вопросов (разные номера). Требуется прочитать revelation.txt. После третьего вопроса диалог завершается автоматически; иначе введите iskin done."
+      "Только после iskin start. Можно задать не более трёх вопросов (разные номера). Требуется прочитать revelation.txt. После третьего вопроса диалог завершается автоматически; иначе введите iskin done."
     ),
     LINE,
   ].join("\n");
@@ -266,7 +284,7 @@ function manIskinDone(): string {
     LINE,
     block("ИМЯ", "iskin done — закончить диалог и разрешить iskin judge."),
     block("СИНТАКСИС", "iskin done"),
-    block("ОПИСАНИЕ", "После этого доступны iskin judge --live и --purge."),
+    block("ОПИСАНИЕ", "После iskin start. После этого доступны iskin judge --live и --purge."),
     LINE,
   ].join("\n");
 }
@@ -284,7 +302,7 @@ function manIskinJudge(): string {
     ),
     block(
       "ОПИСАНИЕ",
-      "Только после cat revelation.txt и завершения диалога (iskin ask / iskin done)."
+      "Только после cat revelation.txt, iskin start и завершения диалога (iskin ask / iskin done)."
     ),
     LINE,
   ].join("\n");
@@ -312,7 +330,7 @@ function manTestIskinDialog(): string {
     block("СИНТАКСИС", "__test_iskin_dialog"),
     block(
       "ОПИСАНИЕ",
-      "Помечает revelation как прочитанный и сбрасывает прогресс диалога. Дальше: iskin ask N, iskin done, iskin judge."
+      "Помечает revelation как прочитанный и сбрасывает прогресс диалога. Дальше: iskin start, iskin ask, iskin done, iskin judge."
     ),
     LINE,
   ].join("\n");

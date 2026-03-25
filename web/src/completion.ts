@@ -155,7 +155,7 @@ export function tabComplete(
     }
   }
 
-  const ISKIN_SUBS = ["ask", "done", "judge"];
+  const ISKIN_SUBS = ["start", "ask", "done", "judge"];
 
   if (cmd === "iskin" && parts.length === 1 && endsWithSpace) {
     return { replacement: line, hint: ISKIN_SUBS.join("  ") };
@@ -172,6 +172,7 @@ export function tabComplete(
 
   if (cmd === "iskin" && parts.length === 2 && endsWithSpace) {
     const sub = parts[1].toLowerCase();
+    if (sub === "start") return { replacement: line.trimEnd() + " ", hint: "start" };
     if (sub === "ask") return { replacement: line + "1 ", hint: "1…5" };
     if (sub === "done") return { replacement: line.trimEnd() + " ", hint: "done" };
     if (sub === "judge") return { replacement: line + "--live ", hint: "--live  --purge" };

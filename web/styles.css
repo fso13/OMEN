@@ -130,6 +130,21 @@ body {
   white-space: nowrap;
 }
 
+.mail-row--unread .mail-row-subject::before {
+  content: "● ";
+  color: #00ff66;
+  font-size: 0.65em;
+  vertical-align: 0.1em;
+}
+
+.mail-row--engineer {
+  border-left: 3px solid rgba(255, 100, 80, 0.45);
+}
+
+.mail-row--iskin {
+  border-left: 3px solid rgba(0, 200, 255, 0.35);
+}
+
 .notes-sticker {
   flex: 1;
   min-height: 120px;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   INITIAL_SHELL,
   MAX_COMMAND_HISTORY,
@@ -10,6 +10,7 @@ import {
 } from "./shell";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
+import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
 import {
   clearSavedGame,
   loadGame,
@@ -32,11 +33,14 @@ function getInitialFromStorage(): {
   endScreen: { visible: boolean; text: string };
   runBootOnMount: boolean;
   commandHistory: string[];
+  unlockedMailIds: string[];
+  readMailIds: string[];
 } {
   const saved = loadGame();
   const bootLines = getBootLines();
   if (saved?.introComplete) {
     const bootComplete = saved.bootComplete !== false;
+    const readMailIds = saved.readMailIds ?? (saved.introComplete ? ["opening"] : []);
     return {
       introComplete: true,
       bootComplete,
@@ -47,6 +51,8 @@ function getInitialFromStorage(): {
       endScreen: saved.endScreen,
       runBootOnMount: !bootComplete,
       commandHistory: saved.commandHistory ?? [],
+      unlockedMailIds: saved.unlockedMailIds ?? [],
+      readMailIds,
     };
   }
   return {
@@ -59,6 +65,8 @@ function getInitialFromStorage(): {
     endScreen: { visible: false, text: "" },
     runBootOnMount: false,
     commandHistory: [],
+    unlockedMailIds: [],
+    readMailIds: [],
   };
 }
 
@@ -78,7 +86,11 @@ export function App() {
   const [tabHint, setTabHint] = useState<string | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>(init.commandHistory);
   const [notesText, setNotesText] = useState(() => loadPlayerNotes());
-  const [mailFromSidebarOpen, setMailFromSidebarOpen] = useState(false);
+  const [unlockedMailIds, setUnlockedMailIds] = useState<string[]>(init.unlockedMailIds);
+  const [readMailIds, setReadMailIds] = useState<string[]>(init.readMailIds);
+  const [mailModal, setMailModal] = useState<
+    null | { kind: "opening" } | { kind: "extra"; id: string }
+  >(null);
   const outRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -135,9 +147,20 @@ export function App() {
       lines,
       endScreen,
       commandHistory,
+      unlockedMailIds,
+      readMailIds,
     };
     saveGame(payload);
-  }, [introComplete, bootComplete, shell, lines, endScreen, commandHistory]);
+  }, [
+    introComplete,
+    bootComplete,
+    shell,
+    lines,
+    endScreen,
+    commandHistory,
+    unlockedMailIds,
+    readMailIds,
+  ]);
 
   useEffect(() => {
     if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
@@ -151,6 +174,7 @@ export function App() {
   }, [notesText]);
 
   const closeOpeningLetter = useCallback(() => {
+    setReadMailIds((prev) => (prev.includes("opening") ? prev : [...prev, "opening"]));
     setIntroComplete(true);
     setBootSession((s) => s + 1);
   }, []);
@@ -168,6 +192,9 @@ export function App() {
     setBootDone(false);
     setBootSession(0);
     setCommandHistory([]);
+    setUnlockedMailIds([]);
+    setReadMailIds([]);
+    setMailModal(null);
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -177,6 +204,7 @@ export function App() {
     const line = input;
     setInput("");
     const wasPendingSu = shell.pendingSu;
+    const prevUnlocked = unlockedMailIds;
     const result = execLine(VFS_FILES, shell, line, commandHistory);
     setShell(result.nextState);
     if (line.trim() && !wasPendingSu) {
@@ -186,16 +214,50 @@ export function App() {
         return next;
       });
     }
+    const newMailIds = (result.mailTriggers ?? []).filter((id) => !prevUnlocked.includes(id));
+
     if (result.clearOutput) {
       setLines([]);
     } else if (result.lines.length) {
-      setLines((prev) => [...prev, ...result.lines]);
+      setLines((prev) => {
+        let next = [...prev, ...result.lines];
+        if (newMailIds.length) {
+          next = [
+            ...next,
+            {
+              text:
+                newMailIds.length === 1
+                  ? "Новое письмо в ящике (слева)."
+                  : `Новые письма в ящике (${newMailIds.length}).`,
+              kind: "normal" as const,
+            },
+          ];
+        }
+        return next;
+      });
+    } else if (newMailIds.length) {
+      setLines((prev) => [
+        ...prev,
+        {
+          text:
+            newMailIds.length === 1
+              ? "Новое письмо в ящике (слева)."
+              : `Новые письма в ящике (${newMailIds.length}).`,
+          kind: "normal" as const,
+        },
+      ]);
     }
     if (result.reader) {
       setReader(result.reader);
     }
     if (result.endScreen) {
       setEndScreen(result.endScreen);
+    }
+    if (result.mailTriggers?.length) {
+      setUnlockedMailIds((prev) => {
+        const next = new Set([...prev, ...result.mailTriggers!]);
+        return [...next];
+      });
     }
   };
 
@@ -206,14 +268,37 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && reader) {
+      if (e.key !== "Escape") return;
+      if (reader) {
         e.preventDefault();
         closeReader();
+        return;
+      }
+      if (mailModal) {
+        e.preventDefault();
+        setMailModal(null);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [reader]);
+  }, [reader, mailModal]);
+
+  const mailInboxRows = useMemo(() => {
+    const extras = EXTRA_MAILS.filter((m) => unlockedMailIds.includes(m.id)).sort(
+      (a, b) => a.order - b.order
+    );
+    return extras;
+  }, [unlockedMailIds]);
+
+  const openSidebarOpening = () => {
+    setMailModal({ kind: "opening" });
+    setReadMailIds((p) => (p.includes("opening") ? p : [...p, "opening"]));
+  };
+
+  const openSidebarExtra = (id: string) => {
+    setMailModal({ kind: "extra", id });
+    setReadMailIds((p) => (p.includes(id) ? p : [...p, id]));
+  };
 
   const prompt = getPromptParts(shell);
 
@@ -260,13 +345,31 @@ export function App() {
                 <li>
                   <button
                     type="button"
-                    className="mail-row"
-                    onClick={() => setMailFromSidebarOpen(true)}
+                    className={
+                      "mail-row" + (!readMailIds.includes("opening") ? " mail-row--unread" : "")
+                    }
+                    onClick={openSidebarOpening}
                   >
                     <span className="mail-row-subject">{OPENING_MAIL.subject}</span>
                     <span className="mail-row-meta">{OPENING_MAIL.from}</span>
                   </button>
                 </li>
+                {mailInboxRows.map((m) => (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      className={
+                        "mail-row mail-row--" +
+                        m.kind +
+                        (!readMailIds.includes(m.id) ? " mail-row--unread" : "")
+                      }
+                      onClick={() => openSidebarExtra(m.id)}
+                    >
+                      <span className="mail-row-subject">{m.subject}</span>
+                      <span className="mail-row-meta">{m.from}</span>
+                    </button>
+                  </li>
+                ))}
               </ul>
             </aside>
             <div className="desktop-center">
@@ -365,30 +468,58 @@ export function App() {
               Закрыть
             </button>
           </div>
-          {mailFromSidebarOpen && (
+          {mailModal && (
             <div
               className="reader-overlay opening-mail-overlay"
               role="dialog"
               aria-modal="true"
               aria-labelledby="sidebarMailTitle"
               onClick={(e) => {
-                if (e.target === e.currentTarget) setMailFromSidebarOpen(false);
+                if (e.target === e.currentTarget) setMailModal(null);
               }}
             >
               <div className="reader-panel opening-mail-panel" onClick={(e) => e.stopPropagation()}>
                 <header className="reader-head">
                   <h2 className="reader-title" id="sidebarMailTitle">
-                    {OPENING_MAIL.subject}
+                    {mailModal.kind === "opening"
+                      ? OPENING_MAIL.subject
+                      : getExtraMailById(mailModal.id)?.subject ?? ""}
                   </h2>
+                  <button
+                    type="button"
+                    className="reader-close"
+                    aria-label="Закрыть"
+                    onClick={() => setMailModal(null)}
+                  >
+                    ×
+                  </button>
                 </header>
                 <div className="reader-body">
-                  <div className="opening-mail-meta">
-                    <span>От: {OPENING_MAIL.from}</span>
-                    <span>К: {OPENING_MAIL.to}</span>
-                  </div>
-                  <pre className="reader-text opening-mail-body">{OPENING_MAIL.body}</pre>
+                  {mailModal.kind === "opening" ? (
+                    <>
+                      <div className="opening-mail-meta">
+                        <span>От: {OPENING_MAIL.from}</span>
+                        <span>К: {OPENING_MAIL.to}</span>
+                      </div>
+                      <pre className="reader-text opening-mail-body">{OPENING_MAIL.body}</pre>
+                    </>
+                  ) : (
+                    (() => {
+                      const em = getExtraMailById(mailModal.id);
+                      if (!em) return null;
+                      return (
+                        <>
+                          <div className="opening-mail-meta">
+                            <span>От: {em.from}</span>
+                            <span>К: {OPENING_MAIL.to}</span>
+                          </div>
+                          <pre className="reader-text opening-mail-body">{em.body}</pre>
+                        </>
+                      );
+                    })()
+                  )}
                   <div className="opening-mail-actions">
-                    <button type="button" className="end-btn" onClick={() => setMailFromSidebarOpen(false)}>
+                    <button type="button" className="end-btn" onClick={() => setMailModal(null)}>
                       Закрыть
                     </button>
                   </div>

@@ -43,6 +43,8 @@ export interface ExecResult {
   clearOutput?: boolean;
   reader?: { title: string; html: string } | null;
   endScreen?: { visible: boolean; text: string };
+  /** Идентификаторы доп. писем для ящика игрока (см. extraMail.ts). */
+  mailTriggers?: string[];
 }
 
 const BOOT_LINES = [
@@ -279,8 +281,15 @@ export function execLine(
   }
 
   const lines: OutputLine[] = [];
+  const mailTriggers: string[] = [];
   const push = (text: string, kind?: OutputLine["kind"]) =>
     lines.push({ text, kind: kind || "normal" });
+
+  const finish = (partial: ExecResult): ExecResult => {
+    const merged = [...mailTriggers, ...(partial.mailTriggers ?? [])];
+    const uniq = [...new Set(merged)];
+    return { ...partial, mailTriggers: uniq.length ? uniq : undefined };
+  };
 
   push(printPromptString(state) + " " + t, "cmd");
 
@@ -292,10 +301,11 @@ export function execLine(
       next.user = "operator";
       next.cwd = "/home/operator";
       push("Сессия переключена на operator");
+      mailTriggers.push("operator_session");
     } else {
       push("su: сбой пароля", "err");
     }
-    return { nextState: next, lines };
+    return finish({ nextState: next, lines });
   }
 
   if (next.ended) {
@@ -309,10 +319,10 @@ export function execLine(
     const helpText = getCommandHelp(cmd, args);
     if (helpText) {
       push(helpText);
-      return { nextState: next, lines };
+      return finish({ nextState: next, lines });
     }
     push(cmd + ": справка для этой команды недоступна", "err");
-    return { nextState: next, lines };
+    return finish({ nextState: next, lines });
   }
 
   const runSu = () => {
@@ -401,7 +411,7 @@ export function execLine(
       ].join("\n")
     );
   } else if (cmd === "clear") {
-    return { nextState: next, lines: [], clearOutput: true };
+    return finish({ nextState: next, lines: [], clearOutput: true });
   } else if (cmd === "whoami") {
     push(next.user);
   } else if (cmd === "pwd") {
@@ -440,14 +450,19 @@ export function execLine(
       } else {
         const body = files[target];
         const imgHtml = htmlForPossibleBase64Image(body);
-        return {
+        const mt: string[] = [];
+        if (normalizeAbs(target) === "/opt/contract-omen/.vault/revelation.txt") {
+          mt.push("after_revelation");
+        }
+        return finish({
           nextState: next,
           lines,
           reader: {
             title: target,
             html: imgHtml ?? glitchHtml(body),
           },
-        };
+          mailTriggers: mt.length ? mt : undefined,
+        });
       }
     }
   } else if (cmd === "grep") {
@@ -480,11 +495,12 @@ export function execLine(
     next.ended = true;
     const text = cmd === "__test_end_live" ? END_TEXT_LIVE : END_TEXT_PURGE;
     push("[тест] показ финального экрана без iskin judge", "normal");
-    return {
+    return finish({
       nextState: next,
       lines,
       endScreen: { visible: true, text },
-    };
+      mailTriggers: ["judge_moment"],
+    });
   } else if (cmd === "iskin") {
     if ((args[1] || "").toLowerCase() !== "judge") {
       push("iskin: неизвестная подкоманда", "err");
@@ -492,25 +508,27 @@ export function execLine(
       const mode = args[2];
       if (mode === "--live") {
         next.ended = true;
-        return {
+        return finish({
           nextState: next,
           lines,
           endScreen: {
             visible: true,
             text: END_TEXT_LIVE,
           },
-        };
+          mailTriggers: ["judge_moment"],
+        });
       }
       if (mode === "--purge") {
         next.ended = true;
-        return {
+        return finish({
           nextState: next,
           lines,
           endScreen: {
             visible: true,
             text: END_TEXT_PURGE,
           },
-        };
+          mailTriggers: ["judge_moment"],
+        });
       }
       push("iskin judge: укажите --live или --purge", "err");
     }
@@ -518,5 +536,30 @@ export function execLine(
     push(cmd + ": команда не найдена", "err");
   }
 
-  return { nextState: next, lines };
+  if (cmd === "grep") {
+    const rest = restAfterCmd(t, "grep");
+    if (rest) {
+      const tok = tokenize(rest);
+      if (tok.length >= 2) {
+        const pattern = tok[0];
+        const filePart = tok.slice(1).join(" ");
+        const target = resolvePath(next.cwd, filePart);
+        if (fileExists(files, target) && /kairo/i.test(pattern)) {
+          const body = files[target];
+          const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+          if (body.split("\n").some((line) => re.test(line))) {
+            mailTriggers.push("first_grep_kairo");
+          }
+        }
+      }
+    }
+  }
+  if (cmd === "decode") {
+    const hasErr = lines.some((ln) => ln.kind === "err");
+    if (lines.length > 1 && !hasErr) {
+      mailTriggers.push("puzzle_chain");
+    }
+  }
+
+  return finish({ nextState: next, lines });
 }

@@ -13,6 +13,10 @@ export interface PersistedGameV1 {
   endScreen: { visible: boolean; text: string };
   /** История введённых команд (для `history`) */
   commandHistory?: string[];
+  /** Разблокированные по сюжету письма (id из extraMail.ts). */
+  unlockedMailIds?: string[];
+  /** Письма, открытые из ящика (для «непрочитано»). */
+  readMailIds?: string[];
 }
 
 export function loadGame(): PersistedGameV1 | null {

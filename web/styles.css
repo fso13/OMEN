@@ -338,6 +338,33 @@ body {
   background: #a0c8d8;
 }
 
+.opening-mail-overlay {
+  z-index: 150;
+}
+
+.opening-mail-panel {
+  max-width: min(560px, 94vw);
+}
+
+.opening-mail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding: 0 1.1rem 0.75rem;
+  font-size: 12px;
+  color: #9aa8b4;
+  border-bottom: 1px solid rgba(100, 120, 140, 0.35);
+}
+
+.opening-mail-body {
+  max-height: min(50vh, 360px);
+}
+
+.opening-mail-actions {
+  padding: 1rem 1.1rem 1.25rem;
+  border-top: 1px solid rgba(100, 120, 140, 0.35);
+}
+
 @media (max-width: 520px) {
   .prompt-path {
     max-width: 40vw;

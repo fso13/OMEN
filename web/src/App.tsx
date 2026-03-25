@@ -8,20 +8,59 @@ import {
   type ShellState,
 } from "./shell";
 import { VFS_FILES } from "./vfsData";
+import { OPENING_MAIL } from "./openingEmail";
+import { clearSavedGame, loadGame, saveGame, type PersistedGameV1 } from "./persist";
 import "../styles.css";
 
+function getInitialFromStorage(): {
+  introComplete: boolean;
+  bootComplete: boolean;
+  bootDone: boolean;
+  bootIndex: number;
+  shell: ShellState;
+  lines: OutputLine[];
+  endScreen: { visible: boolean; text: string };
+  runBootOnMount: boolean;
+} {
+  const saved = loadGame();
+  const bootLines = getBootLines();
+  if (saved?.introComplete) {
+    const bootComplete = saved.bootComplete !== false;
+    return {
+      introComplete: true,
+      bootComplete,
+      bootDone: bootComplete,
+      bootIndex: bootComplete ? bootLines.length : 0,
+      shell: saved.shell,
+      lines: saved.lines,
+      endScreen: saved.endScreen,
+      runBootOnMount: !bootComplete,
+    };
+  }
+  return {
+    introComplete: false,
+    bootComplete: false,
+    bootDone: false,
+    bootIndex: 0,
+    shell: { ...INITIAL_SHELL },
+    lines: [],
+    endScreen: { visible: false, text: "" },
+    runBootOnMount: false,
+  };
+}
+
 export function App() {
-  const [shell, setShell] = useState<ShellState>(() => ({ ...INITIAL_SHELL }));
-  const [lines, setLines] = useState<OutputLine[]>([]);
-  const [bootIndex, setBootIndex] = useState(0);
-  const [bootDone, setBootDone] = useState(false);
-  const [bootSession, setBootSession] = useState(0);
+  const init = getInitialFromStorage();
+  const [introComplete, setIntroComplete] = useState(init.introComplete);
+  const [bootComplete, setBootComplete] = useState(init.bootComplete);
+  const [shell, setShell] = useState<ShellState>(init.shell);
+  const [lines, setLines] = useState<OutputLine[]>(init.lines);
+  const [bootIndex, setBootIndex] = useState(init.bootIndex);
+  const [bootDone, setBootDone] = useState(init.bootDone);
+  const [bootSession, setBootSession] = useState(init.runBootOnMount ? 1 : 0);
   const bootTimers = useRef<number[]>([]);
   const [reader, setReader] = useState<{ title: string; html: string } | null>(null);
-  const [endScreen, setEndScreen] = useState<{ visible: boolean; text: string }>({
-    visible: false,
-    text: "",
-  });
+  const [endScreen, setEndScreen] = useState(init.endScreen);
   const [input, setInput] = useState("");
   const outRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +68,9 @@ export function App() {
   const bootLines = getBootLines();
 
   useEffect(() => {
+    if (!introComplete) return;
+    if (bootSession === 0) return;
+
     setBootIndex(0);
     setBootDone(false);
     bootTimers.current.forEach((id) => clearTimeout(id));
@@ -39,6 +81,7 @@ export function App() {
       if (cancelled) return;
       if (i >= bootLines.length) {
         setBootDone(true);
+        setBootComplete(true);
         return;
       }
       i += 1;
@@ -52,7 +95,7 @@ export function App() {
       bootTimers.current.forEach((id) => clearTimeout(id));
       bootTimers.current = [];
     };
-  }, [bootSession, bootLines.length]);
+  }, [bootSession, introComplete, bootLines.length]);
 
   useEffect(() => {
     if (bootDone) {
@@ -64,13 +107,36 @@ export function App() {
     outRef.current?.scrollTo(0, outRef.current.scrollHeight);
   }, [lines, bootIndex]);
 
+  useEffect(() => {
+    if (!introComplete) return;
+    const payload: PersistedGameV1 = {
+      v: 1,
+      introComplete: true,
+      bootComplete,
+      shell,
+      lines,
+      endScreen,
+    };
+    saveGame(payload);
+  }, [introComplete, bootComplete, shell, lines, endScreen]);
+
+  const closeOpeningLetter = useCallback(() => {
+    setIntroComplete(true);
+    setBootSession((s) => s + 1);
+  }, []);
+
   const resetGame = useCallback(() => {
+    clearSavedGame();
     setShell({ ...INITIAL_SHELL });
     setLines([]);
     setReader(null);
     setEndScreen({ visible: false, text: "" });
     setInput("");
-    setBootSession((s) => s + 1);
+    setIntroComplete(false);
+    setBootComplete(false);
+    setBootIndex(0);
+    setBootDone(false);
+    setBootSession(0);
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -113,74 +179,105 @@ export function App() {
 
   return (
     <>
-      <div className="scene" aria-hidden="true">
-        <div className="scene-bg" />
-        <div className="crt-frame">
-          <div className="crt-bezel">
-            <div className="crt-screen">
-              <div className="scanlines" aria-hidden="true" />
-              <div className="crt-vignette" aria-hidden="true" />
-              <div className="terminal-app">
-                <div className="boot-block">
-                  {bootLines.slice(0, bootIndex).map((t, i) => (
-                    <div key={i} className="boot-line">
-                      {t}
-                    </div>
-                  ))}
-                </div>
-                {bootDone && (
-                  <div className="terminal-body">
-                    <pre ref={outRef} className="terminal-scroll" tabIndex={-1}>
-                      {lines.map((ln, i) => (
-                        <div
-                          key={i}
-                          className={
-                            "terminal-line" +
-                            (ln.kind === "cmd"
-                              ? " terminal-line--cmd"
-                              : ln.kind === "err"
-                                ? " terminal-line--err"
-                                : "")
-                          }
-                        >
-                          {ln.text}
-                        </div>
-                      ))}
-                    </pre>
-                    <form className="prompt-line" onSubmit={onSubmit} autoComplete="off">
-                      <span className="prompt-user">{prompt.userHost}</span>
-                      <span className="prompt-sep">:</span>
-                      <span className="prompt-path">{prompt.pathShort}</span>
-                      <span className="prompt-dollar">$</span>
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        className="prompt-input"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        spellCheck={false}
-                        autoCapitalize="off"
-                        disabled={shell.ended}
-                      />
-                    </form>
-                  </div>
-                )}
+      {!introComplete && (
+        <div
+          className="reader-overlay opening-mail-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="openingMailTitle"
+        >
+          <div className="reader-panel opening-mail-panel" onClick={(e) => e.stopPropagation()}>
+            <header className="reader-head">
+              <h2 className="reader-title" id="openingMailTitle">
+                {OPENING_MAIL.subject}
+              </h2>
+            </header>
+            <div className="reader-body">
+              <div className="opening-mail-meta">
+                <span>От: {OPENING_MAIL.from}</span>
+                <span>К: {OPENING_MAIL.to}</span>
+              </div>
+              <pre className="reader-text opening-mail-body">{OPENING_MAIL.body}</pre>
+              <div className="opening-mail-actions">
+                <button type="button" className="end-btn" onClick={closeOpeningLetter}>
+                  Закрыть и войти в терминал
+                </button>
               </div>
             </div>
           </div>
         </div>
-        <div className="hud-bar">
-          <button
-            type="button"
-            className="hud-close"
-            onClick={() => {
-              if (reader) closeReader();
-            }}
-          >
-            Закрыть
-          </button>
+      )}
+
+      {introComplete && (
+        <div className="scene" aria-hidden="true">
+          <div className="scene-bg" />
+          <div className="crt-frame">
+            <div className="crt-bezel">
+              <div className="crt-screen">
+                <div className="scanlines" aria-hidden="true" />
+                <div className="crt-vignette" aria-hidden="true" />
+                <div className="terminal-app">
+                  <div className="boot-block">
+                    {bootLines.slice(0, bootIndex).map((t, i) => (
+                      <div key={i} className="boot-line">
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                  {bootDone && (
+                    <div className="terminal-body">
+                      <pre ref={outRef} className="terminal-scroll" tabIndex={-1}>
+                        {lines.map((ln, i) => (
+                          <div
+                            key={i}
+                            className={
+                              "terminal-line" +
+                              (ln.kind === "cmd"
+                                ? " terminal-line--cmd"
+                                : ln.kind === "err"
+                                  ? " terminal-line--err"
+                                  : "")
+                            }
+                          >
+                            {ln.text}
+                          </div>
+                        ))}
+                      </pre>
+                      <form className="prompt-line" onSubmit={onSubmit} autoComplete="off">
+                        <span className="prompt-user">{prompt.userHost}</span>
+                        <span className="prompt-sep">:</span>
+                        <span className="prompt-path">{prompt.pathShort}</span>
+                        <span className="prompt-dollar">$</span>
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          className="prompt-input"
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          spellCheck={false}
+                          autoCapitalize="off"
+                          disabled={shell.ended}
+                        />
+                      </form>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="hud-bar">
+            <button
+              type="button"
+              className="hud-close"
+              onClick={() => {
+                if (reader) closeReader();
+              }}
+            >
+              Закрыть
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {reader && (
         <div

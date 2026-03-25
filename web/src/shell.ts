@@ -235,7 +235,6 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, whoami, pwd, cd, ls, cat, grep, su, exit",
-        "  iskin judge --live | --purge  (после revelation.txt)",
         "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
       ].join("\n")
     );

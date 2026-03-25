@@ -6,9 +6,11 @@ import {
   getBootLines,
   getTerminalBannerLines,
   getPromptParts,
+  ISKIN_FACE_DELAY_MS,
   type OutputLine,
   type ShellState,
 } from "./shell";
+import { IskinFaceOverlay } from "./IskinFaceOverlay";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
@@ -96,6 +98,9 @@ export function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerInjectedRef = useRef(false);
+  const [iskinFaceVisible, setIskinFaceVisible] = useState(false);
+  const pendingIskinLinesRef = useRef<string[] | null>(null);
+  const iskinFaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Навигация по истории (↑/↓): null — не в режиме истории; иначе индекс в commandHistory */
   const historyNavIndexRef = useRef<number | null>(null);
   const historyInputDraftRef = useRef("");
@@ -105,6 +110,36 @@ export function App() {
   useEffect(() => {
     bannerInjectedRef.current = false;
   }, [bootSession]);
+
+  useEffect(() => {
+    return () => {
+      if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!iskinFaceVisible) return;
+    if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+    iskinFaceTimerRef.current = window.setTimeout(() => {
+      iskinFaceTimerRef.current = null;
+      const pending = pendingIskinLinesRef.current;
+      pendingIskinLinesRef.current = null;
+      setIskinFaceVisible(false);
+      if (pending?.length) {
+        setLines((prev) => [
+          ...prev,
+          ...pending.map((text) => ({ text, kind: "normal" as const })),
+        ]);
+      }
+      inputRef.current?.focus();
+    }, ISKIN_FACE_DELAY_MS);
+    return () => {
+      if (iskinFaceTimerRef.current) {
+        clearTimeout(iskinFaceTimerRef.current);
+        iskinFaceTimerRef.current = null;
+      }
+    };
+  }, [iskinFaceVisible]);
 
   useEffect(() => {
     if (!bootDone || !introComplete) return;
@@ -215,6 +250,10 @@ export function App() {
     setMailModal(null);
     historyNavIndexRef.current = null;
     historyInputDraftRef.current = "";
+    pendingIskinLinesRef.current = null;
+    if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+    iskinFaceTimerRef.current = null;
+    setIskinFaceVisible(false);
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -237,7 +276,12 @@ export function App() {
     }
     const newMailIds = (result.mailTriggers ?? []).filter((id) => !prevUnlocked.includes(id));
 
-    if (result.clearOutput) {
+    if (result.iskinFaceOverlay && result.deferredIskinLines?.length) {
+      pendingIskinLinesRef.current = result.deferredIskinLines;
+      setLines([]);
+      bannerInjectedRef.current = false;
+      setIskinFaceVisible(true);
+    } else if (result.clearOutput) {
       bannerInjectedRef.current = true;
       setLines(
         getTerminalBannerLines().map((text) => ({ text, kind: "banner" as const }))
@@ -328,6 +372,7 @@ export function App() {
 
   return (
     <>
+      <IskinFaceOverlay visible={iskinFaceVisible} />
       {!introComplete && (
         <div
           className="reader-overlay opening-mail-overlay"

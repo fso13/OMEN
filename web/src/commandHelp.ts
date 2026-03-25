@@ -258,7 +258,7 @@ function manIskinStart(): string {
     block("СИНТАКСИС", "iskin start"),
     block(
       "ОПИСАНИЕ",
-      "Перед первым iskin ask нужно прочитать этот вывод. Требуется cat revelation.txt."
+      "Очищает вывод терминала, показывает загрузку и «канал» Искина, затем текст. Требуется cat revelation.txt."
     ),
     LINE,
   ].join("\n");

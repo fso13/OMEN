@@ -746,6 +746,105 @@ body {
   border-top: 1px solid rgba(100, 120, 140, 0.35);
 }
 
+/* Искин: полноэкранное «лицо» (SHODAN-like) */
+.iskin-face-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  animation: iskin-face-fade 0.4s ease forwards;
+}
+
+@keyframes iskin-face-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.iskin-face-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
+  z-index: 0;
+}
+
+.iskin-face-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 1.5rem;
+  transition: transform 0.15s ease-out;
+}
+
+.iskin-face-title {
+  margin: 0 0 0.75rem;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: #00ff41;
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.6);
+}
+
+.iskin-face-svg {
+  width: min(280px, 70vw);
+  height: auto;
+  filter: drop-shadow(0 0 20px rgba(0, 255, 65, 0.35));
+}
+
+.iskin-face-outline {
+  filter: drop-shadow(0 0 8px rgba(0, 255, 65, 0.5));
+}
+
+.iskin-face-scan {
+  animation: iskin-scan 1.8s ease-in-out infinite;
+}
+
+@keyframes iskin-scan {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.iskin-face-loading {
+  margin-top: 1rem;
+  font-size: 11px;
+  color: #00cc33;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.45);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.45;
+}
+
+.iskin-face-loading-dot {
+  animation: iskin-blink 1s step-end infinite;
+}
+
+@keyframes iskin-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.iskin-face-hint {
+  margin: 0.75rem 0 0;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: #008822;
+  text-transform: uppercase;
+}
+
 @media (max-width: 520px) {
   .prompt-path {
     max-width: 40vw;

@@ -18,8 +18,11 @@ import {
   iskinAnswerLines,
   iskinMenuLines,
   iskinPreludeDoneMessage,
+  iskinPressureAfterAnswer,
   iskinStartLines,
 } from "./iskinDialog";
+
+export const ISKIN_FACE_DELAY_MS = 3000;
 
 export interface ShellState {
   cwd: string;
@@ -62,6 +65,10 @@ export interface ExecResult {
   endScreen?: { visible: boolean; text: string };
   /** Идентификаторы доп. писем для ящика игрока (см. extraMail.ts). */
   mailTriggers?: string[];
+  /** Полноэкранное «лицо» Искина + задержка перед deferredIskinLines. */
+  iskinFaceOverlay?: boolean;
+  /** Строки терминала после задержки (после iskin start). */
+  deferredIskinLines?: string[];
 }
 
 const BOOT_LINES = [
@@ -326,9 +333,13 @@ export function execLine(
     return { ...partial, mailTriggers: uniq.length ? uniq : undefined };
   };
 
-  push(printPromptString(state) + " " + t, "cmd");
-
   let next: ShellState = { ...state };
+  const isIskinStart = /^iskin\s+start\s*$/i.test(t);
+  const iskinStartWillSucceed =
+    isIskinStart && next.revelationRead && !next.iskinDialogFinished;
+  if (!iskinStartWillSucceed) {
+    push(printPromptString(state) + " " + t, "cmd");
+  }
 
   if (next.pendingSu) {
     next.pendingSu = false;
@@ -556,7 +567,17 @@ export function execLine(
         push("iskin start: диалог уже завершён — используйте iskin judge.", "err");
       } else {
         next.iskinDialogStarted = true;
-        iskinStartLines().forEach((line) => push(line));
+        const deferred = [
+          printPromptString(next) + " iskin start",
+          ...iskinStartLines(),
+        ];
+        return finish({
+          nextState: next,
+          lines: [],
+          clearOutput: true,
+          iskinFaceOverlay: true,
+          deferredIskinLines: deferred,
+        });
       }
     } else if (sub === "ask") {
       const n = parseInt(args[2] || "", 10);
@@ -582,6 +603,9 @@ export function execLine(
           } else {
             next.iskinDialogAskedIds = [...asked, n];
             iskinAnswerLines(qid).forEach((line) => push(line));
+            iskinPressureAfterAnswer(next.iskinDialogAskedIds.length).forEach((line) =>
+              push(line)
+            );
             if (next.iskinDialogAskedIds.length >= ISKIN_MAX_QUESTIONS) {
               next.iskinDialogFinished = true;
               iskinPreludeDoneMessage().forEach((line) => push(line));

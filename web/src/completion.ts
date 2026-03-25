@@ -19,6 +19,8 @@ const COMMANDS = [
   "su",
   "exit",
   "iskin",
+  "__test_end_live",
+  "__test_end_purge",
 ];
 
 function longestCommonPrefix(strs: string[]): string {

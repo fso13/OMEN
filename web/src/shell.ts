@@ -34,7 +34,7 @@ export const END_TEXT_PURGE =
 
 export interface OutputLine {
   text: string;
-  kind?: "normal" | "cmd" | "err";
+  kind?: "normal" | "cmd" | "err" | "banner";
 }
 
 export interface ExecResult {
@@ -54,8 +54,26 @@ const BOOT_LINES = [
   "Сессия: guest. Введите help для справки.",
 ];
 
+/** Строки баннера для области вывода терминала (после бут-анимации). */
+const BANNER_LINES = [
+  "",
+  "  ██████╗ ███╗   ███╗███████╗███╗   ██╗",
+  " ██╔═══██╗████╗ ████║██╔════╝████╗  ██║",
+  " ██║   ██║██╔████╔██║█████╗  ██╔██╗ ██║",
+  " ██║   ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║",
+  " ╚██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║",
+  "  ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝",
+  "  Operational Modeling & Extraction Node · staging",
+  "  ─────────────────────────────────────────────",
+  "",
+];
+
 export function getBootLines(): string[] {
   return BOOT_LINES;
+}
+
+export function getTerminalBannerLines(): string[] {
+  return BANNER_LINES;
 }
 
 function escapeHtml(s: string): string {

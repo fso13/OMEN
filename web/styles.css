@@ -400,6 +400,14 @@ body {
   text-shadow: 0 0 8px rgba(255, 80, 80, 0.5);
 }
 
+.terminal-line--banner {
+  color: #00aa44;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.25);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
 .prompt-line {
   display: flex;
   align-items: center;

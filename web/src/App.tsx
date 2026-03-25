@@ -4,6 +4,7 @@ import {
   MAX_COMMAND_HISTORY,
   execLine,
   getBootLines,
+  getTerminalBannerLines,
   getPromptParts,
   type OutputLine,
   type ShellState,
@@ -94,8 +95,22 @@ export function App() {
   const outRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bannerInjectedRef = useRef(false);
 
   const bootLines = getBootLines();
+
+  useEffect(() => {
+    bannerInjectedRef.current = false;
+  }, [bootSession]);
+
+  useEffect(() => {
+    if (!bootDone || !introComplete) return;
+    setLines((prev) => {
+      if (prev.length > 0 || bannerInjectedRef.current) return prev;
+      bannerInjectedRef.current = true;
+      return getTerminalBannerLines().map((text) => ({ text, kind: "banner" as const }));
+    });
+  }, [bootDone, introComplete]);
 
   useEffect(() => {
     if (!introComplete) return;
@@ -217,7 +232,10 @@ export function App() {
     const newMailIds = (result.mailTriggers ?? []).filter((id) => !prevUnlocked.includes(id));
 
     if (result.clearOutput) {
-      setLines([]);
+      bannerInjectedRef.current = true;
+      setLines(
+        getTerminalBannerLines().map((text) => ({ text, kind: "banner" as const }))
+      );
     } else if (result.lines.length) {
       setLines((prev) => {
         let next = [...prev, ...result.lines];
@@ -398,7 +416,9 @@ export function App() {
                                     ? " terminal-line--cmd"
                                     : ln.kind === "err"
                                       ? " terminal-line--err"
-                                      : "")
+                                      : ln.kind === "banner"
+                                        ? " terminal-line--banner"
+                                        : "")
                                 }
                               >
                                 {ln.text}

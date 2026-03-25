@@ -96,6 +96,9 @@ export function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerInjectedRef = useRef(false);
+  /** Навигация по истории (↑/↓): null — не в режиме истории; иначе индекс в commandHistory */
+  const historyNavIndexRef = useRef<number | null>(null);
+  const historyInputDraftRef = useRef("");
 
   const bootLines = getBootLines();
 
@@ -210,11 +213,14 @@ export function App() {
     setUnlockedMailIds([]);
     setReadMailIds([]);
     setMailModal(null);
+    historyNavIndexRef.current = null;
+    historyInputDraftRef.current = "";
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTabHint(null);
+    historyNavIndexRef.current = null;
     if (!bootDone || shell.ended) return;
     const line = input;
     setInput("");
@@ -436,16 +442,52 @@ export function App() {
                               className="prompt-input"
                               value={input}
                               onChange={(e) => {
+                                historyNavIndexRef.current = null;
                                 setInput(e.target.value);
                                 setTabHint(null);
                               }}
                               onKeyDown={(e) => {
-                                if (e.key !== "Tab") return;
-                                e.preventDefault();
-                                const res = tabComplete(VFS_FILES, shell, input);
-                                if (!res) return;
-                                setInput(res.replacement);
-                                setTabHint(res.hint ?? null);
+                                if (e.key === "Tab") {
+                                  e.preventDefault();
+                                  const res = tabComplete(VFS_FILES, shell, input);
+                                  if (!res) return;
+                                  setInput(res.replacement);
+                                  setTabHint(res.hint ?? null);
+                                  return;
+                                }
+                                if (shell.pendingSu) return;
+                                const hist = commandHistory;
+                                if (e.key === "ArrowUp") {
+                                  if (hist.length === 0) return;
+                                  e.preventDefault();
+                                  setTabHint(null);
+                                  if (historyNavIndexRef.current === null) {
+                                    historyInputDraftRef.current = input;
+                                    const idx = hist.length - 1;
+                                    historyNavIndexRef.current = idx;
+                                    setInput(hist[idx] ?? "");
+                                  } else {
+                                    const idx = historyNavIndexRef.current;
+                                    if (idx > 0) {
+                                      historyNavIndexRef.current = idx - 1;
+                                      setInput(hist[idx - 1] ?? "");
+                                    }
+                                  }
+                                  return;
+                                }
+                                if (e.key === "ArrowDown") {
+                                  if (historyNavIndexRef.current === null) return;
+                                  e.preventDefault();
+                                  setTabHint(null);
+                                  const idx = historyNavIndexRef.current;
+                                  if (idx < hist.length - 1) {
+                                    historyNavIndexRef.current = idx + 1;
+                                    setInput(hist[idx + 1] ?? "");
+                                  } else {
+                                    historyNavIndexRef.current = null;
+                                    setInput(historyInputDraftRef.current);
+                                  }
+                                }
                               }}
                               spellCheck={false}
                               autoCapitalize="off"

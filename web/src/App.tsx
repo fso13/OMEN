@@ -11,6 +11,7 @@ import {
   type ShellState,
 } from "./shell";
 import { IskinFaceOverlay } from "./IskinFaceOverlay";
+import { getIskinDialogBannerLines } from "./iskinConsoleBanner";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
@@ -99,6 +100,7 @@ export function App() {
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerInjectedRef = useRef(false);
   const [iskinFaceVisible, setIskinFaceVisible] = useState(false);
+  const [iskinBannerPhase, setIskinBannerPhase] = useState(0);
   const pendingIskinLinesRef = useRef<string[] | null>(null);
   const iskinFaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Навигация по истории (↑/↓): null — не в режиме истории; иначе индекс в commandHistory */
@@ -187,8 +189,34 @@ export function App() {
   }, [bootDone]);
 
   useEffect(() => {
+    if (!shell.iskinDialogActive) return;
+    setIskinBannerPhase(0);
+  }, [shell.iskinDialogActive]);
+
+  useEffect(() => {
+    if (!shell.iskinDialogActive || !bootDone) return;
+    const id = window.setInterval(() => {
+      setIskinBannerPhase((p) => p + 1);
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [shell.iskinDialogActive, bootDone]);
+
+  const iskinBannerLines = useMemo(() => {
+    if (!shell.iskinDialogActive) return [];
+    return getIskinDialogBannerLines(iskinBannerPhase).map((text) => ({
+      text,
+      kind: "iskin" as const,
+    }));
+  }, [shell.iskinDialogActive, iskinBannerPhase]);
+
+  const displayLines = useMemo(
+    () => [...iskinBannerLines, ...lines],
+    [iskinBannerLines, lines]
+  );
+
+  useEffect(() => {
     outRef.current?.scrollTo(0, outRef.current.scrollHeight);
-  }, [lines, bootIndex]);
+  }, [displayLines, bootIndex]);
 
   useEffect(() => {
     if (!introComplete) return;
@@ -458,7 +486,7 @@ export function App() {
                       {bootDone && (
                         <div className="terminal-body">
                           <pre ref={outRef} className="terminal-scroll" tabIndex={-1}>
-                            {lines.map((ln, i) => (
+                            {displayLines.map((ln, i) => (
                               <div
                                 key={i}
                                 className={
@@ -469,7 +497,9 @@ export function App() {
                                       ? " terminal-line--err"
                                       : ln.kind === "banner"
                                         ? " terminal-line--banner"
-                                        : "")
+                                        : ln.kind === "iskin"
+                                          ? " terminal-line--iskin"
+                                          : "")
                                 }
                               >
                                 {ln.text}

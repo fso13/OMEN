@@ -37,6 +37,8 @@ export interface ShellState {
   iskinDialogAskedIds?: number[];
   /** После iskin done — разрешён iskin judge. */
   iskinDialogFinished?: boolean;
+  /** Прямой канал Искина: в консоли показывается ASCII-баннер до iskin judge. */
+  iskinDialogActive?: boolean;
 }
 
 export const INITIAL_SHELL: ShellState = {
@@ -54,7 +56,7 @@ export const END_TEXT_PURGE =
 
 export interface OutputLine {
   text: string;
-  kind?: "normal" | "cmd" | "err" | "banner";
+  kind?: "normal" | "cmd" | "err" | "banner" | "iskin";
 }
 
 export interface ExecResult {
@@ -544,12 +546,14 @@ export function execLine(
     next.iskinDialogStarted = false;
     next.iskinDialogAskedIds = undefined;
     next.iskinDialogFinished = false;
+    next.iskinDialogActive = false;
     push(
       "[тест] revelation помечен прочитанным — iskin start, затем iskin ask до трёх раз, iskin done, iskin judge.",
       "normal"
     );
   } else if (cmd === "__test_end_live" || cmd === "__test_end_purge") {
     next.ended = true;
+    next.iskinDialogActive = false;
     const text = cmd === "__test_end_live" ? END_TEXT_LIVE : END_TEXT_PURGE;
     push("[тест] показ финального экрана без iskin judge", "normal");
     return finish({
@@ -567,6 +571,7 @@ export function execLine(
         push("iskin start: диалог уже завершён — используйте iskin judge.", "err");
       } else {
         next.iskinDialogStarted = true;
+        next.iskinDialogActive = true;
         const deferred = [
           printPromptString(next) + " iskin start",
           ...iskinStartLines(),
@@ -640,6 +645,7 @@ export function execLine(
         const mode = args[2];
         if (mode === "--live") {
           next.ended = true;
+          next.iskinDialogActive = false;
           return finish({
             nextState: next,
             lines,
@@ -652,6 +658,7 @@ export function execLine(
         }
         if (mode === "--purge") {
           next.ended = true;
+          next.iskinDialogActive = false;
           return finish({
             nextState: next,
             lines,

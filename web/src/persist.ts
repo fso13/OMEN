@@ -39,6 +39,13 @@ export function loadGame(): PersistedGameV1 | null {
         sh.iskinDialogStarted = true;
       }
     }
+    if (sh.iskinDialogActive === undefined) {
+      if (sh.ended || sh.iskinDialogFinished) {
+        sh.iskinDialogActive = false;
+      } else if (sh.iskinDialogStarted) {
+        sh.iskinDialogActive = true;
+      }
+    }
     return data;
   } catch {
     return null;

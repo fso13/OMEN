@@ -23,6 +23,7 @@ const COMMANDS = [
   "iskin",
   "__test_end_live",
   "__test_end_purge",
+  "__test_iskin_dialog",
 ];
 
 const DECODE_SUBS = ["caesar", "base64", "hex", "reverse", "atbash"];
@@ -154,23 +155,48 @@ export function tabComplete(
     }
   }
 
+  const ISKIN_SUBS = ["ask", "done", "judge"];
+
   if (cmd === "iskin" && parts.length === 1 && endsWithSpace) {
-    return { replacement: line + "judge ", hint: "judge" };
+    return { replacement: line, hint: ISKIN_SUBS.join("  ") };
+  }
+
+  if (cmd === "iskin" && parts.length === 2 && !endsWithSpace) {
+    const p = parts[1].toLowerCase();
+    const hits = ISKIN_SUBS.filter((s) => s.startsWith(p));
+    if (hits.length === 1) return { replacement: trimmed.slice(0, -parts[1].length) + hits[0] + " " };
+    const lcp = longestCommonPrefix(hits);
+    if (lcp.length > p.length) return { replacement: trimmed.slice(0, -parts[1].length) + lcp };
+    if (hits.length) return { replacement: line, hint: hits.join("  ") };
+  }
+
+  if (cmd === "iskin" && parts.length === 2 && endsWithSpace) {
+    const sub = parts[1].toLowerCase();
+    if (sub === "ask") return { replacement: line + "1 ", hint: "1…5" };
+    if (sub === "done") return { replacement: line.trimEnd() + " ", hint: "done" };
+    if (sub === "judge") return { replacement: line + "--live ", hint: "--live  --purge" };
+  }
+
+  if (cmd === "iskin" && parts.length >= 2 && parts[1].toLowerCase() === "ask") {
+    if (parts.length === 2 && endsWithSpace) {
+      return { replacement: line, hint: "1  2  3  4  5" };
+    }
+    if (parts.length === 3 && !endsWithSpace) {
+      const p = parts[2];
+      const hits = ["1", "2", "3", "4", "5"].filter((h) => h.startsWith(p));
+      if (hits.length === 1) return { replacement: trimmed.slice(0, -p.length) + hits[0] + " " };
+      if (hits.length) return { replacement: line, hint: hits.join("  ") };
+    }
   }
 
   if (cmd === "iskin" && parts.length >= 2 && parts[1].toLowerCase() === "judge") {
     if (parts.length === 2 && endsWithSpace) {
+      return { replacement: line + "--live ", hint: "--live  --purge" };
+    }
+    if (parts.length === 3 && endsWithSpace) {
       return { replacement: line, hint: "--live  --purge" };
     }
-    if (parts.length === 2 && !endsWithSpace) {
-      const p = parts[1];
-      const hits = ["--live", "--purge"].filter((h) => h.startsWith(p));
-      if (hits.length === 1) return { replacement: trimmed.slice(0, -p.length) + hits[0] + " " };
-      const lcp = longestCommonPrefix(hits);
-      if (lcp.length > p.length) return { replacement: trimmed.slice(0, -p.length) + lcp };
-      if (hits.length) return { replacement: line, hint: hits.join("  ") };
-    }
-    if (parts.length >= 3 && !endsWithSpace) {
+    if (parts.length === 3 && !endsWithSpace) {
       const p = parts[2];
       const hits = ["--live", "--purge"].filter((h) => h.startsWith(p));
       if (hits.length === 1) return { replacement: trimmed.slice(0, -p.length) + hits[0] + " " };

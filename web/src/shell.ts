@@ -2,6 +2,8 @@
  * Stateless shell: pure functions for OMEN terminal emulation.
  */
 
+import { getCommandHelp } from "./commandHelp";
+
 export interface ShellState {
   cwd: string;
   user: string;
@@ -251,6 +253,10 @@ function restAfterCmd(line: string, name: string): string {
   return line.slice(m.index! + m[0].length).trim();
 }
 
+function wantsHelp(args: string[]): boolean {
+  return args.slice(1).some((a) => a === "-help" || a === "--help");
+}
+
 export function execLine(
   files: Record<string, string>,
   state: ShellState,
@@ -288,6 +294,16 @@ export function execLine(
   const args = tokenize(t);
   const cmd = (args[0] || "").toLowerCase();
 
+  if (wantsHelp(args)) {
+    const helpText = getCommandHelp(cmd, args);
+    if (helpText) {
+      push(helpText);
+      return { nextState: next, lines };
+    }
+    push(cmd + ": справка для этой команды недоступна", "err");
+    return { nextState: next, lines };
+  }
+
   const runSu = () => {
     const target = args[1] || "";
     if (target !== "operator") {
@@ -303,9 +319,10 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
-        // "  iskin judge --live | --purge  (финал после revelation.txt)",
-        // "  __test_end_live / __test_end_purge — только для теста финального экрана",
-        // "  ls -a — показать скрытые (имена с .); ls -l — подробный список",
+        "  iskin judge --live | --purge  (финал после revelation.txt)",
+        "  __test_end_live / __test_end_purge — только для теста финального экрана",
+        "  У любой команды: -help или --help (например: cat --help)",
+        "  ls -a — скрытые файлы; ls -l — подробный список",
         "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
       ].join("\n")
     );

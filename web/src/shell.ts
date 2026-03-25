@@ -425,6 +425,7 @@ export function execLine(
         // "  __test_end_live / __test_end_purge — только для теста финального экрана",
         "  У любой команды: -help или --help (например: cat --help)",
         // "  ls -a — скрытые файлы; ls -l — подробный список",
+        "  ↑ / ↓ — предыдущие команды из истории (как в bash)",
         "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
       ].join("\n")
     );

@@ -303,9 +303,9 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
-        "  iskin judge --live | --purge  (финал после revelation.txt)",
-        "  __test_end_live / __test_end_purge — только для теста финального экрана",
-        "  ls -a — показать скрытые (имена с .); ls -l — подробный список",
+        // "  iskin judge --live | --purge  (финал после revelation.txt)",
+        // "  __test_end_live / __test_end_purge — только для теста финального экрана",
+        // "  ls -a — показать скрытые (имена с .); ls -l — подробный список",
         "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
       ].join("\n")
     );

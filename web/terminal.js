@@ -9,11 +9,13 @@
     "Сессия: guest. Введите help для справки.",
   ];
 
-  const state = {
+  const INITIAL = {
     cwd: "/home/guest",
     user: "guest",
     ended: false,
   };
+
+  const state = { ...INITIAL };
 
   const el = {
     boot: document.getElementById("bootBlock"),
@@ -378,6 +380,24 @@
     next();
   }
 
+  function resetGame() {
+    state.cwd = INITIAL.cwd;
+    state.user = INITIAL.user;
+    state.ended = INITIAL.ended;
+    delete state._pendingSu;
+
+    el.endScreen.hidden = true;
+    el.endText.textContent = "";
+    closeReader();
+
+    el.out.innerHTML = "";
+    el.boot.innerHTML = "";
+    el.body.hidden = true;
+    updatePrompt();
+    el.input.value = "";
+    runBoot();
+  }
+
   el.form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (state.ended) return;
@@ -402,8 +422,10 @@
     else appendLine("—", null);
   });
 
-  el.endRestart.addEventListener("click", () => {
-    location.reload();
+  el.endRestart.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resetGame();
   });
 
   runBoot();

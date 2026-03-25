@@ -304,8 +304,11 @@ body {
 }
 
 .end-panel {
+  position: relative;
+  z-index: 1;
   max-width: 560px;
   text-align: center;
+  pointer-events: auto;
 }
 
 .end-text {
@@ -318,6 +321,8 @@ body {
 }
 
 .end-btn {
+  position: relative;
+  z-index: 2;
   font: inherit;
   padding: 0.5rem 1.25rem;
   color: #1a2028;
@@ -325,6 +330,7 @@ body {
   border: none;
   border-radius: 2px;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .end-btn:hover {

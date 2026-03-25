@@ -1,63 +1,18 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OMEN — staging</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="scene" aria-hidden="true">
-    <div class="scene-bg"></div>
-    <div class="crt-frame">
-      <div class="crt-bezel">
-        <div class="crt-screen">
-          <div class="scanlines" aria-hidden="true"></div>
-          <div class="crt-vignette" aria-hidden="true"></div>
-          <div class="terminal-app" id="terminalApp">
-            <div class="boot-block" id="bootBlock"></div>
-            <div class="terminal-body" id="terminalBody" hidden>
-              <pre class="terminal-scroll" id="terminalOut" tabindex="-1"></pre>
-              <form class="prompt-line" id="promptForm" autocomplete="off">
-                <span class="prompt-user" id="promptUser">guest@staging</span>
-                <span class="prompt-sep">:</span>
-                <span class="prompt-path" id="promptPath">~</span>
-                <span class="prompt-dollar">$</span>
-                <input type="text" class="prompt-input" id="promptInput" spellcheck="false" autocapitalize="off" />
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="hud-bar">
-      <button type="button" class="hud-close" id="btnCloseHud">Закрыть</button>
-    </div>
-  </div>
-
-  <div class="reader-overlay" id="readerOverlay" hidden>
-    <div class="reader-panel" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
-      <header class="reader-head">
-        <h2 class="reader-title" id="readerTitle">файл</h2>
-        <button type="button" class="reader-close" id="readerClose" aria-label="Закрыть">×</button>
-      </header>
-      <div class="reader-body">
-        <pre class="reader-text" id="readerText"></pre>
-      </div>
-    </div>
-  </div>
-
-  <div class="end-screen" id="endScreen" hidden>
-    <div class="end-panel">
-      <pre class="end-text" id="endText"></pre>
-      <button type="button" class="end-btn" id="endRestart">Начать снова</button>
-    </div>
-  </div>
-
-  <script src="fs.js"></script>
-  <script src="terminal.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OMEN — staging</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

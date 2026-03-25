@@ -35,6 +35,8 @@ export function getCommandHelp(cmd: string, args: string[]): string | null {
       return manCat();
     case "grep":
       return manGrep();
+    case "decode":
+      return manDecode();
     case "su":
       return manSu();
     case "exit":
@@ -163,6 +165,33 @@ function manGrep(): string {
     block("ИМЯ", "grep — строки файла, совпадающие с шаблоном."),
     block("СИНТАКСИС", "grep ШАБЛОН ФАЙЛ"),
     block("ОПИСАНИЕ", "Шаблон — подстрока; сравнение без учёта регистра. Регулярные выражения не используются."),
+    LINE,
+  ].join("\n");
+}
+
+function manDecode(): string {
+  return [
+    header("decode"),
+    LINE,
+    block(
+      "ИМЯ",
+      "decode — расшифровка строк в терминале (загадки в файлах OMEN)."
+    ),
+    block(
+      "СИНТАКСИС",
+      `decode caesar СДВИГ ТЕКСТ
+       decode base64 СТРОКА
+       decode hex СТРОКА
+       decode reverse ТЕКСТ
+       decode atbash ТЕКСТ`
+    ),
+    block(
+      "ОПИСАНИЕ",
+      `caesar — сдвиг букв кириллицы (33 буквы) и латиницы (26). Отрицательный сдвиг — в обратную сторону (типично для «взлома» +7).
+base64 / hex — декодирование в UTF-8 (hex без пробелов, можно с префиксом 0x).
+reverse — символы в обратном порядке.
+atbash — зеркало алфавита (кириллица и латиница).`
+    ),
     LINE,
   ].join("\n");
 }

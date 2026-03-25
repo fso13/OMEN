@@ -17,12 +17,15 @@ const COMMANDS = [
   "ls",
   "cat",
   "grep",
+  "decode",
   "su",
   "exit",
   "iskin",
   "__test_end_live",
   "__test_end_purge",
 ];
+
+const DECODE_SUBS = ["caesar", "base64", "hex", "reverse", "atbash"];
 
 function longestCommonPrefix(strs: string[]): string {
   if (strs.length === 0) return "";
@@ -121,6 +124,34 @@ export function tabComplete(
 
   if (cmd === "su" && parts.length === 1 && endsWithSpace) {
     return { replacement: line + "operator " };
+  }
+
+  if (cmd === "decode") {
+    if (parts.length === 1 && endsWithSpace) {
+      return { replacement: line, hint: DECODE_SUBS.join("  ") };
+    }
+    if (parts.length === 1 && !endsWithSpace) {
+      const p = parts[0];
+      const hits = COMMANDS.filter((c) => c.startsWith(p.toLowerCase()));
+      if (hits.length === 1 && hits[0] === "decode") {
+        return { replacement: "decode ", hint: DECODE_SUBS.join("  ") };
+      }
+    }
+    if (parts.length === 2 && endsWithSpace) {
+      const sub = parts[1].toLowerCase();
+      if (sub === "caesar") {
+        return { replacement: line + "-7 ", hint: "сдвиг, затем текст в кавычках" };
+      }
+      return { replacement: line, hint: "введите закодированную строку" };
+    }
+    if (parts.length === 2 && !endsWithSpace) {
+      const p = parts[1].toLowerCase();
+      const hits = DECODE_SUBS.filter((s) => s.startsWith(p));
+      if (hits.length === 1) return { replacement: trimmed.slice(0, -parts[1].length) + hits[0] + " " };
+      const lcp = longestCommonPrefix(hits);
+      if (lcp.length > p.length) return { replacement: trimmed.slice(0, -parts[1].length) + lcp };
+      if (hits.length) return { replacement: line, hint: hits.join("  ") };
+    }
   }
 
   if (cmd === "iskin" && parts.length === 1 && endsWithSpace) {

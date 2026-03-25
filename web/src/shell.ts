@@ -3,6 +3,13 @@
  */
 
 import { getCommandHelp } from "./commandHelp";
+import {
+  atbash,
+  caesarShift,
+  decodeBase64Utf8,
+  decodeHexUtf8,
+  reverseText,
+} from "./decodeUtils";
 
 export interface ShellState {
   cwd: string;
@@ -317,7 +324,60 @@ export function execLine(
     next.pendingSu = true;
   };
 
-  if (cmd === "history") {
+  const runDecode = () => {
+    const sub = (args[1] || "").toLowerCase();
+    if (!sub) {
+      push(
+        "decode: подкоманды: caesar, base64, hex, reverse, atbash. См. decode --help",
+        "err"
+      );
+      return;
+    }
+    if (sub === "caesar") {
+      let i = 2;
+      const shiftTok = args[i] || "";
+      if (!/^-?\d+$/.test(shiftTok)) {
+        push(
+          'decode caesar: укажите сдвиг: decode caesar -7 "текст" (отрицательный — назад)',
+          "err"
+        );
+        return;
+      }
+      const shift = parseInt(shiftTok, 10);
+      i++;
+      const payload = args.slice(i).join(" ").trim();
+      if (!payload) {
+        push("decode caesar: нет текста", "err");
+        return;
+      }
+      push(caesarShift(payload, shift));
+      return;
+    }
+    const payload = args.slice(2).join(" ").trim();
+    if (!payload) {
+      push("decode: нет текста после подкоманды", "err");
+      return;
+    }
+    try {
+      if (sub === "base64") {
+        push(decodeBase64Utf8(payload));
+      } else if (sub === "hex") {
+        push(decodeHexUtf8(payload));
+      } else if (sub === "reverse") {
+        push(reverseText(payload));
+      } else if (sub === "atbash") {
+        push(atbash(payload));
+      } else {
+        push("decode: неизвестная подкоманда: " + sub, "err");
+      }
+    } catch {
+      push("decode: ошибка разбора (проверьте формат строки)", "err");
+    }
+  };
+
+  if (cmd === "decode") {
+    runDecode();
+  } else if (cmd === "history") {
     if (commandHistory.length === 0) {
       push("(история команд пуста)");
     } else {
@@ -331,7 +391,7 @@ export function execLine(
     push(
       [
         "Доступные команды:",
-        "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
+        "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, decode, su, exit",
         // "  iskin judge --live | --purge  (финал после revelation.txt)",
         // "  __test_end_live / __test_end_purge — только для теста финального экрана",
         "  У любой команды: -help или --help (например: cat --help)",

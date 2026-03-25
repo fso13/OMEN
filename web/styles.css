@@ -25,6 +25,172 @@ body {
   padding: 1.5rem 1rem 4rem;
 }
 
+/* Трёхколоночный стол: почта | терминал | заметки */
+.desktop-workspace {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: min(1400px, 100%);
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(280px, 1fr) minmax(200px, 280px);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0 0.5rem;
+}
+
+.desktop-center {
+  min-width: 0;
+  width: 100%;
+}
+
+.desktop-center .crt-frame {
+  width: 100%;
+  max-width: none;
+}
+
+.side-panel {
+  position: sticky;
+  top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  min-height: min(70vh, 520px);
+  max-height: min(85vh, 640px);
+  padding: 0.65rem 0.75rem;
+  background: linear-gradient(165deg, rgba(8, 18, 10, 0.92) 0%, rgba(0, 8, 4, 0.96) 100%);
+  border: 1px solid rgba(0, 255, 65, 0.22);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 0 40px rgba(0, 40, 20, 0.25);
+}
+
+.side-panel-title {
+  margin: 0 0 0.35rem;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #33ff66;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.35);
+}
+
+.side-panel-hint {
+  margin: 0 0 0.5rem;
+  font-size: 10px;
+  color: #008833;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.mail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mail-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.5rem 0.45rem;
+  text-align: left;
+  font: inherit;
+  font-size: 11px;
+  color: #b8f0c8;
+  background: rgba(0, 30, 15, 0.45);
+  border: 1px solid rgba(0, 255, 65, 0.18);
+  border-radius: 3px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.mail-row:hover {
+  background: rgba(0, 50, 25, 0.55);
+  border-color: rgba(0, 255, 65, 0.35);
+}
+
+.mail-row-subject {
+  font-weight: 500;
+  color: #e8ffe8;
+  line-height: 1.35;
+}
+
+.mail-row-meta {
+  font-size: 10px;
+  color: #559966;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-sticker {
+  flex: 1;
+  min-height: 120px;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.55rem;
+  resize: vertical;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #0a1a0c;
+  background: linear-gradient(180deg, #f5f0c8 0%, #e8e4b8 100%);
+  border: 1px solid rgba(80, 90, 40, 0.45);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    2px 3px 6px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+
+.notes-sticker::placeholder {
+  color: rgba(40, 50, 30, 0.45);
+}
+
+.notes-sticker:focus {
+  border-color: rgba(0, 255, 65, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 1px rgba(0, 255, 65, 0.2);
+}
+
+@media (max-width: 960px) {
+  .desktop-workspace {
+    grid-template-columns: 1fr;
+    max-width: min(920px, 100%);
+  }
+
+  .side-panel {
+    position: relative;
+    top: auto;
+    max-height: none;
+    min-height: auto;
+  }
+
+  .side-panel--mail {
+    order: 2;
+  }
+
+  .desktop-center {
+    order: 1;
+  }
+
+  .side-panel--notes {
+    order: 3;
+  }
+
+  .notes-sticker {
+    min-height: 100px;
+  }
+}
+
 .scene-bg {
   position: fixed;
   inset: 0;

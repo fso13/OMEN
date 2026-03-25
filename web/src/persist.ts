@@ -1,6 +1,7 @@
 import type { OutputLine, ShellState } from "./shell";
 
 const STORAGE_KEY = "omen-terminal-save-v1";
+const NOTES_KEY = "omen-terminal-notes-v1";
 
 export interface PersistedGameV1 {
   v: 1;
@@ -44,5 +45,23 @@ export function clearSavedGame(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+export function loadPlayerNotes(): string {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    if (raw == null) return "";
+    return typeof raw === "string" ? raw : "";
+  } catch {
+    return "";
+  }
+}
+
+export function savePlayerNotes(text: string): void {
+  try {
+    localStorage.setItem(NOTES_KEY, text);
+  } catch {
+    /* quota / private mode */
   }
 }

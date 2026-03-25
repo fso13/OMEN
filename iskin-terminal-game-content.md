@@ -54,10 +54,12 @@ SILENCE-KEY-7
 ├── home/
 │   ├── guest/
 │   │   ├── .bash_history
-│   │   └── README.txt
+│   │   ├── README.txt
+│   │   └── .hidden_hint
 │   └── operator/
 │       ├── .bash_history
 │       ├── .profile
+│       ├── .profile.local
 │       ├── Documents/
 │       │   ├── ticket_OMEN-4412.txt
 │       │   ├── fragment_rfc.txt
@@ -87,6 +89,7 @@ SILENCE-KEY-7
 │   └── contract-omen/
 │       ├── CHANGELOG
 │       ├── README.md
+│       ├── .omen_hidden
 │       ├── build/
 │       │   └── fingerprint.sha256
 │       ├── config/
@@ -866,6 +869,7 @@ kernel: [NEURO_ICE] тепло ключа выше нуля — проверьт
 
 ## 6. Примечание для реализации
 
+- **Консоль (React):** в игре реализованы `ls -a` / `ls -l` (как в Unix), скрытые файлы с точкой в имени, автодополнение по Tab и матричный визуальный стиль терминала.
 - **Локаль:** тексты сценария сейчас на русском; технические поля (`anchor`, имена команд `iskin judge`, хеши) можно оставить как есть для парсинга или дублировать ключи в JSON при смене локали.
 - Имена файлов и пароли можно заменить; важно сохранить **логические связи**: письмо ↔ якорь ↔ `manifest.json`; audit ↔ id сессии ↔ `index.csv` ↔ чанк; путь к `revelation.txt`.
 - Пасхалки: список тегов в `easter_tags.txt`; перекрёстная отсылка в `kern.log` (`NEURO_ICE`) и в `omen-app.log` (`follow_white_rabbit`).

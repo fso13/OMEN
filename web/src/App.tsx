@@ -11,6 +11,7 @@ import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { clearSavedGame, loadGame, saveGame, type PersistedGameV1 } from "./persist";
 import { EndEmailStream } from "./EndEmailStream";
+import { tabComplete } from "./completion";
 import "../styles.css";
 
 function getInitialFromStorage(): {
@@ -63,6 +64,7 @@ export function App() {
   const [reader, setReader] = useState<{ title: string; html: string } | null>(null);
   const [endScreen, setEndScreen] = useState(init.endScreen);
   const [input, setInput] = useState("");
+  const [tabHint, setTabHint] = useState<string | null>(null);
   const outRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +144,7 @@ export function App() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTabHint(null);
     if (!bootDone || shell.ended) return;
     const line = input;
     setInput("");
@@ -210,9 +213,10 @@ export function App() {
       )}
 
       {introComplete && (
-        <div className="scene" aria-hidden="true">
-          <div className="scene-bg" />
-          <div className="crt-frame">
+        <div className="scene scene--matrix" aria-hidden="true">
+          <div className="scene-bg scene-bg--matrix" />
+          <div className="matrix-rain matrix-rain--bg" aria-hidden="true" />
+          <div className="crt-frame crt-frame--matrix">
             <div className="crt-bezel">
               <div className="crt-screen">
                 <div className="scanlines" aria-hidden="true" />
@@ -254,12 +258,28 @@ export function App() {
                           type="text"
                           className="prompt-input"
                           value={input}
-                          onChange={(e) => setInput(e.target.value)}
+                          onChange={(e) => {
+                            setInput(e.target.value);
+                            setTabHint(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Tab") return;
+                            e.preventDefault();
+                            const res = tabComplete(VFS_FILES, shell, input);
+                            if (!res) return;
+                            setInput(res.replacement);
+                            setTabHint(res.hint ?? null);
+                          }}
                           spellCheck={false}
                           autoCapitalize="off"
                           disabled={shell.ended}
                         />
                       </form>
+                      {tabHint && (
+                        <div className="tab-hint" aria-live="polite">
+                          {tabHint}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

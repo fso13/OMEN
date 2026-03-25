@@ -10,9 +10,9 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  font-family: "IBM Plex Mono", "Consolas", "Courier New", monospace;
-  background: #0a0c0e;
-  color: #c8d0d8;
+  font-family: "Share Tech Mono", "IBM Plex Mono", "Consolas", "Courier New", monospace;
+  background: #000;
+  color: #00ff41;
 }
 
 .scene {
@@ -35,11 +35,36 @@ body {
   pointer-events: none;
 }
 
+.scene--matrix .scene-bg--matrix {
+  background: radial-gradient(ellipse 100% 80% at 50% 20%, #001a0a 0%, #000 55%);
+}
+
+/* Matrix-style digital rain (decorative) */
+.matrix-rain--bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.03) 2px,
+    rgba(0, 255, 65, 0.03) 3px
+  );
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.65), transparent 70%);
+}
+
 .crt-frame {
   position: relative;
   z-index: 1;
   width: min(920px, 96vw);
   filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.55));
+}
+
+.crt-frame--matrix {
+  filter: drop-shadow(0 0 24px rgba(0, 255, 65, 0.15)) drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75));
 }
 
 .crt-bezel {
@@ -51,6 +76,15 @@ body {
     inset 0 -2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.scene--matrix .crt-bezel {
+  background: linear-gradient(145deg, #0a120a 0%, #050805 50%, #0a0f0a 100%);
+  padding: 1px;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 65, 0.35),
+    inset 0 0 40px rgba(0, 40, 0, 0.5);
+}
+
 .crt-screen {
   position: relative;
   background: #0e1014;
@@ -58,6 +92,14 @@ body {
   overflow: hidden;
   min-height: min(70vh, 520px);
   box-shadow: inset 0 0 0 2px #1a1e24;
+}
+
+.scene--matrix .crt-screen {
+  background: #000;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 255, 65, 0.25),
+    inset 0 0 80px rgba(0, 30, 0, 0.85);
+  border-radius: 3px;
 }
 
 .scanlines {
@@ -75,12 +117,27 @@ body {
   opacity: 0.45;
 }
 
+.scene--matrix .scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.04) 2px,
+    rgba(0, 255, 65, 0.04) 3px
+  );
+  opacity: 0.35;
+}
+
 .crt-vignette {
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.scene--matrix .crt-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.75) 100%);
 }
 
 .terminal-app {
@@ -97,6 +154,11 @@ body {
   line-height: 1.45;
   color: #9aa8b0;
   text-shadow: 0 0 1px rgba(180, 200, 220, 0.3);
+}
+
+.scene--matrix .boot-block {
+  color: #00cc33;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.35);
 }
 
 .boot-line {
@@ -130,6 +192,11 @@ body {
   word-break: break-word;
 }
 
+.scene--matrix .terminal-scroll {
+  color: #00ff41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.45);
+}
+
 .terminal-line {
   margin: 0 0 0.15em;
   white-space: pre-wrap;
@@ -139,8 +206,17 @@ body {
   color: #8ab4c4;
 }
 
+.scene--matrix .terminal-line--cmd {
+  color: #66ff88;
+}
+
 .terminal-line--err {
   color: #c08080;
+}
+
+.scene--matrix .terminal-line--err {
+  color: #ff5555;
+  text-shadow: 0 0 8px rgba(255, 80, 80, 0.5);
 }
 
 .prompt-line {
@@ -153,8 +229,18 @@ body {
   background: rgba(0, 0, 0, 0.25);
 }
 
+.scene--matrix .prompt-line {
+  border-top-color: rgba(0, 255, 65, 0.2);
+  background: rgba(0, 20, 0, 0.4);
+}
+
 .prompt-user {
   color: #7ec8a0;
+}
+
+.scene--matrix .prompt-user {
+  color: #00ff66;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
 }
 
 .prompt-sep,
@@ -162,11 +248,20 @@ body {
   color: #6a7a88;
 }
 
+.scene--matrix .prompt-sep,
+.scene--matrix .prompt-dollar {
+  color: #008833;
+}
+
 .prompt-path {
   color: #8ab4e0;
   max-width: 55vw;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.scene--matrix .prompt-path {
+  color: #33ff66;
 }
 
 .prompt-input {
@@ -178,6 +273,22 @@ body {
   font: inherit;
   outline: none;
   caret-color: #7ec8a0;
+}
+
+.scene--matrix .prompt-input {
+  color: #e8ffe8;
+  caret-color: #00ff41;
+}
+
+.tab-hint {
+  padding: 0.2rem 1rem 0.5rem;
+  font-size: 11px;
+  color: #008833;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px dashed rgba(0, 255, 65, 0.15);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .hud-bar {

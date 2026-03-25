@@ -69,7 +69,7 @@ function glitchHtml(text: string): string {
   return parts.join("\n");
 }
 
-function normalizeAbs(p: string): string {
+export function normalizeAbs(p: string): string {
   const parts = p.split("/").filter(Boolean);
   const stack: string[] = [];
   for (const x of parts) {
@@ -79,7 +79,7 @@ function normalizeAbs(p: string): string {
   return "/" + stack.join("/");
 }
 
-function resolvePath(cwd: string, input: string): string {
+export function resolvePath(cwd: string, input: string): string {
   if (!input) return cwd;
   const raw = input.trim();
   if (!raw) return cwd;
@@ -87,17 +87,17 @@ function resolvePath(cwd: string, input: string): string {
   return normalizeAbs(cwd + "/" + raw);
 }
 
-function basename(p: string): string {
+export function basename(p: string): string {
   const n = normalizeAbs(p);
   const i = n.lastIndexOf("/");
   return i < 0 ? n : n.slice(i + 1);
 }
 
-function fileExists(files: Record<string, string>, path: string): boolean {
+export function fileExists(files: Record<string, string>, path: string): boolean {
   return Object.prototype.hasOwnProperty.call(files, path);
 }
 
-function isDirectory(files: Record<string, string>, path: string): boolean {
+export function isDirectory(files: Record<string, string>, path: string): boolean {
   const n = normalizeAbs(path);
   if (n === "/") return true;
   if (fileExists(files, n)) return false;
@@ -109,7 +109,12 @@ function isDirectory(files: Record<string, string>, path: string): boolean {
   return false;
 }
 
-function listDir(files: Record<string, string>, dir: string): string[] | null {
+/** Список имён в каталоге. Скрытые (начинаются с `.`) — только при showHidden. */
+export function listDirNames(
+  files: Record<string, string>,
+  dir: string,
+  opts: { showHidden: boolean }
+): string[] | null {
   const d = normalizeAbs(dir);
   if (!fileExists(files, d) && !isDirectory(files, d)) return null;
   if (fileExists(files, d)) return null;
@@ -126,7 +131,63 @@ function listDir(files: Record<string, string>, dir: string): string[] | null {
     const seg = rest.split("/")[0];
     if (seg) names.add(seg);
   }
-  return Array.from(names).sort();
+  let arr = Array.from(names).sort();
+  if (!opts.showHidden) {
+    arr = arr.filter((n) => !n.startsWith("."));
+  }
+  return arr;
+}
+
+function fileSize(files: Record<string, string>, fullPath: string): number {
+  if (!fileExists(files, fullPath)) return 4096;
+  return new TextEncoder().encode(files[fullPath]).length;
+}
+
+function formatLsLong(
+  files: Record<string, string>,
+  parentDir: string,
+  names: string[],
+  user: string
+): string {
+  const lines: string[] = [];
+  const totalBlocks = Math.max(8, names.length * 4);
+  lines.push(`total ${totalBlocks}`);
+  for (const name of names) {
+    const full = parentDir === "/" ? "/" + name : parentDir + "/" + name;
+    const isDir = isDirectory(files, full);
+    const mode = isDir ? "drwxr-xr-x" : "-rw-r--r--";
+    const nlink = isDir ? 2 : 1;
+    const sz = isDir ? 4096 : fileSize(files, full);
+    const date = "Jan  9 03:11";
+    lines.push(`${mode} ${nlink} ${user} ${user} ${String(sz).padStart(6)} ${date} ${name}`);
+  }
+  return lines.join("\n");
+}
+
+export interface LsFlags {
+  all: boolean;
+  long: boolean;
+}
+
+/** Разбор аргументов ls: флаги -a -l, остальное — путь. */
+export function parseLsArgs(args: string[]): { flags: LsFlags; pathArg: string } {
+  let all = false;
+  let long = false;
+  const rest: string[] = [];
+  for (let i = 1; i < args.length; i++) {
+    const a = args[i];
+    if (a.startsWith("-") && a.length > 1) {
+      for (let j = 1; j < a.length; j++) {
+        const c = a[j];
+        if (c === "a") all = true;
+        else if (c === "l") long = true;
+      }
+    } else {
+      rest.push(a);
+    }
+  }
+  const pathArg = rest.length ? rest.join(" ") : ".";
+  return { flags: { all, long }, pathArg };
 }
 
 export function pathDisplay(p: string): string {
@@ -149,7 +210,7 @@ export function getPromptParts(state: ShellState): { userHost: string; pathShort
   };
 }
 
-function tokenize(line: string): string[] {
+export function tokenize(line: string): string[] {
   const out: string[] = [];
   let cur = "";
   let q: string | null = null;
@@ -234,7 +295,8 @@ export function execLine(
     push(
       [
         "Доступные команды:",
-        "  help, clear, whoami, pwd, cd, ls, cat, grep, su, exit",
+        "  help, clear, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
+        "  ls -a — показать скрытые (имена с .); ls -l — подробный список",
         "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
       ].join("\n")
     );
@@ -245,14 +307,16 @@ export function execLine(
   } else if (cmd === "pwd") {
     push(next.cwd);
   } else if (cmd === "ls") {
-    const pathRest = restAfterCmd(t, "ls");
-    const target = resolvePath(next.cwd, pathRest || ".");
+    const { flags, pathArg } = parseLsArgs(args);
+    const target = resolvePath(next.cwd, pathArg || ".");
     if (fileExists(files, target)) {
       push(basename(target));
     } else {
-      const names = listDir(files, target);
+      const names = listDirNames(files, target, { showHidden: flags.all });
       if (!names) {
         push("ls: нет доступа или нет такого пути: " + target, "err");
+      } else if (flags.long) {
+        push(formatLsLong(files, target, names, next.user));
       } else {
         push(names.join("  "));
       }

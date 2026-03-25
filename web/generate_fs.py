@@ -77,53 +77,45 @@ find /opt/contract-omen -type f
 sha256sum /opt/contract-omen/build/fingerprint.sha256
 cat /srv/data/manifest.json""")
 
-add("/home/operator/Documents/puzzles/README_chain.txt", """ЦЕПОЧКА OMEN — «пять слоёв» (архив тренировки операторов)
+# add("/home/operator/Documents/puzzles/README_chain.txt", """ЦЕПОЧКА OMEN — «пять слоёв» (архив тренировки операторов)
 
-Искин оставил это как проверку: не только grep по логам, но и чтение шума.
-Порядок файлов: 01_caesar.txt → 02_b64.txt → 03_hex.txt → 04_reverse.txt → 05_atbash.txt
+# Искин оставил это как проверку: не только grep по логам, но и чтение шума.
+# Порядок файлов: 01_caesar.txt → 02_b64.txt → 03_hex.txt → 04_reverse.txt → 05_atbash.txt
 
-В конце цепочки — напоминание, где искать материал пароля (audit, KAIRO).
-Команда decode встроена в эмулятор: decode --help
+# В конце цепочки — напоминание, где искать материал пароля (audit, KAIRO).
+# Команда decode встроена в эмулятор: decode --help
 
-Если застряли: первый слой — Цезарь с шагом +7 (расшифровка: decode caesar -7).
-""")
+# Если застряли: первый слой — Цезарь с шагом +7 (расшифровка: decode caesar -7).
+# """)
 
-add("/home/operator/Documents/puzzles/01_caesar.txt", """[OMEN / слой 1 — Цезарь +7, кириллица и латиница]
+add("/home/operator/Documents/puzzles/01_caesar.txt", """[OMEN / слой 1]
 
 Штлкъеапр ыжрт: 02_i64.aea. Чжшяпычхисж: kljvkl jhlzhy -7
 
-Скопируйте строку шифра целиком (от «Штлкъеапр» до «-7») и выполните:
-decode caesar -7 «строка»
-
-Имя следующего файла в шифре совпадает с реальным именем на диске: 02_b64.txt
 """)
 
-add("/home/operator/Documents/puzzles/02_b64.txt", """[OMEN / слой 2 — Base64, UTF-8]
+add("/home/operator/Documents/puzzles/02_b64.txt", """[OMEN / слой 2]
 
 0KHQu9C10LTRg9GO0YnQuNC5INGE0LDQudC7OiAwM19oZXgudHh0LiDQodGC0YDQvtC60LAg0L3QuNC20LUg0LIgYmFzZTY0Lg==
 
-decode base64 «одна строка base64 выше, без переносов»
 """)
 
-add("/home/operator/Documents/puzzles/03_hex.txt", """[OMEN / слой 3 — шестнадцатеричная UTF-8]
+add("/home/operator/Documents/puzzles/03_hex.txt", """[OMEN / слой 3]
 
 d0a1d0bbd0b5d0b4d183d18ed189d0b8d0b920d184d0b0d0b9d0bb3a2030345f726576657273652e7478742e20d09dd0b8d0b6d0b520d188d0b5d181d182d0bdd0b0d0b4d186d0b0d182d0b5d180d0b8d187d0bdd0b0d18f205554462d3820d181d182d180d0bed0bad0b02e
 
-decode hex «строка hex одной линией»
 """)
 
-add("/home/operator/Documents/puzzles/04_reverse.txt", """[OMEN / слой 4 — реверс строки]
+add("/home/operator/Documents/puzzles/04_reverse.txt", """[OMEN / слой 4]
 
 .txt.hsabta_50 :лйаф йищюуделС .дёрепан модаз тскет ежиН
 
-decode reverse «вся строка между метками слоя»
 """)
 
-add("/home/operator/Documents/puzzles/05_atbash.txt", """[OMEN / слой 5 — атбаш (зеркало алфавита)]
+add("/home/operator/Documents/puzzles/05_atbash.txt", """[OMEN / слой 5]
 
 Кцсяугсдх нурх. Пяоруг пр-поъшсътл э zfwrg.olt (PZRIL). Фрьромя съ нпцм.
 
-decode atbash «строка выше»
 
 ---
 Финал цепочки: пароль оператора по-прежнему не в файлах головоломок — он в

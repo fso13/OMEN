@@ -257,10 +257,13 @@ function wantsHelp(args: string[]): boolean {
   return args.slice(1).some((a) => a === "-help" || a === "--help");
 }
 
+export const MAX_COMMAND_HISTORY = 500;
+
 export function execLine(
   files: Record<string, string>,
   state: ShellState,
-  line: string
+  line: string,
+  commandHistory: string[]
 ): ExecResult {
   const t = line.trim();
   if (!t) {
@@ -314,11 +317,21 @@ export function execLine(
     next.pendingSu = true;
   };
 
-  if (cmd === "help" || cmd === "?") {
+  if (cmd === "history") {
+    if (commandHistory.length === 0) {
+      push("(история команд пуста)");
+    } else {
+      push(
+        commandHistory
+          .map((entry, i) => `${String(i + 1).padStart(5)}  ${entry}`)
+          .join("\n")
+      );
+    }
+  } else if (cmd === "help" || cmd === "?") {
     push(
       [
         "Доступные команды:",
-        "  help, clear, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
+        "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, su, exit",
         "  iskin judge --live | --purge  (финал после revelation.txt)",
         "  __test_end_live / __test_end_purge — только для теста финального экрана",
         "  У любой команды: -help или --help (например: cat --help)",

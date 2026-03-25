@@ -10,6 +10,8 @@ export interface PersistedGameV1 {
   shell: ShellState;
   lines: OutputLine[];
   endScreen: { visible: boolean; text: string };
+  /** История введённых команд (для `history`) */
+  commandHistory?: string[];
 }
 
 export function loadGame(): PersistedGameV1 | null {

@@ -10,6 +10,7 @@ import {
 const COMMANDS = [
   "help",
   "clear",
+  "history",
   "whoami",
   "pwd",
   "cd",

@@ -21,6 +21,8 @@ export function getCommandHelp(cmd: string, args: string[]): string | null {
       return manHelp();
     case "clear":
       return manClear();
+    case "history":
+      return manHistory();
     case "whoami":
       return manWhoami();
     case "pwd":
@@ -70,6 +72,20 @@ function manClear(): string {
     block("ИМЯ", "clear — очистить вывод терминала."),
     block("СИНТАКСИС", "clear"),
     block("ОПИСАНИЕ", "Стирает историю строк на экране (не затрагивает состояние сессии)."),
+    LINE,
+  ].join("\n");
+}
+
+function manHistory(): string {
+  return [
+    header("history"),
+    LINE,
+    block("ИМЯ", "history — список ранее введённых команд."),
+    block("СИНТАКСИС", "history"),
+    block(
+      "ОПИСАНИЕ",
+      "Показывает пронумерованные строки. Пароли после su не сохраняются. Хранится до 500 записей; сохраняется вместе с прогрессом."
+    ),
     LINE,
   ].join("\n");
 }

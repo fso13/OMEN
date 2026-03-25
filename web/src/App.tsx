@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   INITIAL_SHELL,
+  MAX_COMMAND_HISTORY,
   execLine,
   getBootLines,
   getPromptParts,
@@ -23,6 +24,7 @@ function getInitialFromStorage(): {
   lines: OutputLine[];
   endScreen: { visible: boolean; text: string };
   runBootOnMount: boolean;
+  commandHistory: string[];
 } {
   const saved = loadGame();
   const bootLines = getBootLines();
@@ -37,6 +39,7 @@ function getInitialFromStorage(): {
       lines: saved.lines,
       endScreen: saved.endScreen,
       runBootOnMount: !bootComplete,
+      commandHistory: saved.commandHistory ?? [],
     };
   }
   return {
@@ -48,6 +51,7 @@ function getInitialFromStorage(): {
     lines: [],
     endScreen: { visible: false, text: "" },
     runBootOnMount: false,
+    commandHistory: [],
   };
 }
 
@@ -65,6 +69,7 @@ export function App() {
   const [endScreen, setEndScreen] = useState(init.endScreen);
   const [input, setInput] = useState("");
   const [tabHint, setTabHint] = useState<string | null>(null);
+  const [commandHistory, setCommandHistory] = useState<string[]>(init.commandHistory);
   const outRef = useRef<HTMLPreElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -119,9 +124,10 @@ export function App() {
       shell,
       lines,
       endScreen,
+      commandHistory,
     };
     saveGame(payload);
-  }, [introComplete, bootComplete, shell, lines, endScreen]);
+  }, [introComplete, bootComplete, shell, lines, endScreen, commandHistory]);
 
   const closeOpeningLetter = useCallback(() => {
     setIntroComplete(true);
@@ -140,6 +146,7 @@ export function App() {
     setBootIndex(0);
     setBootDone(false);
     setBootSession(0);
+    setCommandHistory([]);
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -148,8 +155,16 @@ export function App() {
     if (!bootDone || shell.ended) return;
     const line = input;
     setInput("");
-    const result = execLine(VFS_FILES, shell, line);
+    const wasPendingSu = shell.pendingSu;
+    const result = execLine(VFS_FILES, shell, line, commandHistory);
     setShell(result.nextState);
+    if (line.trim() && !wasPendingSu) {
+      setCommandHistory((prev) => {
+        const next = [...prev, line];
+        if (next.length > MAX_COMMAND_HISTORY) return next.slice(-MAX_COMMAND_HISTORY);
+        return next;
+      });
+    }
     if (result.clearOutput) {
       setLines([]);
     } else if (result.lines.length) {

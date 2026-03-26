@@ -21,6 +21,14 @@ import {
   iskinPressureAfterAnswer,
   iskinStartLines,
 } from "./iskinDialog";
+import {
+  isPuzzleChainFile,
+  normalizePuzzlePassword,
+  puzzleChainIndex,
+  puzzlePreviousInChain,
+  PUZZLE_CHAIN_ORDER,
+  PUZZLE_FILE_PASSWORD,
+} from "./puzzleChain";
 
 export const ISKIN_FACE_DELAY_MS = 3000;
 
@@ -39,13 +47,29 @@ export interface ShellState {
   iskinDialogFinished?: boolean;
   /** Прямой канал Искина: в консоли показывается ASCII-баннер до iskin judge. */
   iskinDialogActive?: boolean;
+  /** Разблокированные файлы цепочки puzzles (абсолютные пути). */
+  puzzleUnlocked?: string[];
 }
 
 export const INITIAL_SHELL: ShellState = {
   cwd: "/home/guest",
   user: "guest",
   ended: false,
+  puzzleUnlocked: [],
 };
+
+function mergePuzzleUnlock(state: ShellState, absPath: string): ShellState {
+  const had = state.puzzleUnlocked ?? [];
+  if (had.includes(absPath)) return state;
+  return { ...state, puzzleUnlocked: [...had, absPath] };
+}
+
+function isPuzzleFileReadable(state: ShellState, absPath: string): boolean {
+  const i = puzzleChainIndex(absPath);
+  if (i < 0) return true;
+  if (i === 0) return true;
+  return (state.puzzleUnlocked ?? []).includes(absPath);
+}
 
 /** Тексты финальных экранов (используются и в `iskin judge`, и в тестовых командах). */
 export const END_TEXT_LIVE =
@@ -495,26 +519,70 @@ export function execLine(
     if (!pathRest) {
       push("cat: укажите файл", "err");
     } else {
-      const target = resolvePath(next.cwd, pathRest);
-      if (!fileExists(files, target)) {
-        push("cat: нет файла: " + target, "err");
+      const catTok = tokenize(pathRest);
+      if (catTok.length === 0) {
+        push("cat: укажите файл", "err");
       } else {
-        const body = files[target];
-        const imgHtml = htmlForPossibleBase64Image(body);
-        const mt: string[] = [];
-        if (normalizeAbs(target) === "/opt/contract-omen/.vault/revelation.txt") {
-          mt.push("after_revelation");
-          next.revelationRead = true;
+        const target = resolvePath(next.cwd, catTok[0]);
+        const passwordArg =
+          catTok.length >= 2 ? catTok.slice(1).join(" ") : undefined;
+        if (!fileExists(files, target)) {
+          push("cat: нет файла: " + target, "err");
+        } else if (isPuzzleChainFile(target) && !isPuzzleFileReadable(next, target)) {
+          const need = PUZZLE_FILE_PASSWORD[target];
+          const prev = puzzlePreviousInChain(target);
+          const got = passwordArg ? normalizePuzzlePassword(passwordArg) : "";
+          if (!need || got !== need) {
+            push(
+              "cat: доступ к " +
+                basename(target) +
+                " заблокирован. Нужен пароль из предыдущего слоя цепочки: " +
+                (prev ? basename(prev) : "—") +
+                ". Использование: cat " +
+                basename(target) +
+                " ПАРОЛЬ",
+              "err"
+            );
+          } else {
+            next = mergePuzzleUnlock(next, target);
+            const body = files[target];
+            const imgHtml = htmlForPossibleBase64Image(body);
+            const mt: string[] = [];
+            if (normalizeAbs(target) === "/opt/contract-omen/.vault/revelation.txt") {
+              mt.push("after_revelation");
+              next.revelationRead = true;
+            }
+            return finish({
+              nextState: next,
+              lines,
+              reader: {
+                title: target,
+                html: imgHtml ?? glitchHtml(body),
+              },
+              mailTriggers: mt.length ? mt : undefined,
+            });
+          }
+        } else {
+          const body = files[target];
+          const imgHtml = htmlForPossibleBase64Image(body);
+          const mt: string[] = [];
+          if (normalizeAbs(target) === "/opt/contract-omen/.vault/revelation.txt") {
+            mt.push("after_revelation");
+            next.revelationRead = true;
+          }
+          if (isPuzzleChainFile(target)) {
+            next = mergePuzzleUnlock(next, target);
+          }
+          return finish({
+            nextState: next,
+            lines,
+            reader: {
+              title: target,
+              html: imgHtml ?? glitchHtml(body),
+            },
+            mailTriggers: mt.length ? mt : undefined,
+          });
         }
-        return finish({
-          nextState: next,
-          lines,
-          reader: {
-            title: target,
-            html: imgHtml ?? glitchHtml(body),
-          },
-          mailTriggers: mt.length ? mt : undefined,
-        });
       }
     }
   } else if (cmd === "grep") {
@@ -531,6 +599,13 @@ export function execLine(
         const target = resolvePath(next.cwd, filePart);
         if (!fileExists(files, target)) {
           push("grep: нет файла: " + target, "err");
+        } else if (isPuzzleChainFile(target) && !isPuzzleFileReadable(next, target)) {
+          push(
+            "grep: " +
+              basename(target) +
+              " заблокирован до разблокировки через cat с паролем из предыдущего слоя.",
+            "err"
+          );
         } else {
           const body = files[target];
           const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");

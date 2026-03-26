@@ -46,6 +46,9 @@ export function loadGame(): PersistedGameV1 | null {
         sh.iskinDialogActive = true;
       }
     }
+    if (sh.puzzleUnlocked === undefined) {
+      sh.puzzleUnlocked = [];
+    }
     return data;
   } catch {
     return null;

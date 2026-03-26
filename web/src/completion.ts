@@ -243,7 +243,24 @@ export function tabComplete(
     return completePath(files, shell, partial, before);
   }
 
-  if (cmd === "cd" || cmd === "cat") {
+  if (cmd === "cd") {
+    if (endsWithSpace) {
+      return completePath(files, shell, "", trimmed + " ");
+    }
+    if (parts.length < 2) return null;
+    const partial = parts[parts.length - 1];
+    const before = trimmed.slice(0, -partial.length);
+    return completePath(files, shell, partial, before);
+  }
+
+  if (cmd === "cat") {
+    if (parts.length >= 3) return null;
+    if (parts.length === 2 && endsWithSpace) {
+      return {
+        replacement: line,
+        hint: "пароль из предыдущего файла цепочки (для 02–05)",
+      };
+    }
     if (endsWithSpace) {
       return completePath(files, shell, "", trimmed + " ");
     }

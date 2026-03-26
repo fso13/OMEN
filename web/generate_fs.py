@@ -33,6 +33,8 @@ add("/home/guest/README.txt", """СТАРЫЙ СТЕНД ДЛЯ ДЕМО. УЧЁ
 Дополнительная цепочка (не обязательна для su, но раскрывает слои OMEN):
 каталог /home/operator/Documents/puzzles/ — зашифрованные вложения; в терминале
 есть команда decode (см. decode --help): Цезарь, base64, hex, реверс, атбаш.
+Файлы 02–05 в этой цепочке открываются только с паролем: пароль к следующему
+файлу зашифрован в предыдущем; после расшифровки: cat ИМЯ_ФАЙЛА ПАРОЛЬ
 
 Файл redblue.txt у оператора (/home/operator/Documents/) — вложение в base64;
 команда cat покажет картинку в окне просмотра.
@@ -90,31 +92,45 @@ cat /srv/data/manifest.json""")
 
 add("/home/operator/Documents/puzzles/01_caesar.txt", """[OMEN / слой 1]
 
-Штлкъеапр ыжрт: 02_i64.aea. Чжшяпычхисж: kljvkl jhlzhy -7
+Следующий файл: 02_b64.txt — закрыт паролем. Пароль зашифрован ниже (Цезарь +7 по
+алфавиту; снять: decode caesar -7 «…»).
+
+VTLU-JOHPU-S2-I64
 
 """)
 
 add("/home/operator/Documents/puzzles/02_b64.txt", """[OMEN / слой 2]
 
-0KHQu9C10LTRg9GO0YnQuNC5INGE0LDQudC7OiAwM19oZXgudHh0LiDQodGC0YDQvtC60LAg0L3QuNC20LUg0LIgYmFzZTY0Lg==
+Следующий файл: 03_hex.txt — закрыт паролем. Пароль в UTF-8, строка ниже в base64
+(снять: decode base64 «…»).
+
+T01FTi1DSEFJTi1MMy1IRVg=
 
 """)
 
 add("/home/operator/Documents/puzzles/03_hex.txt", """[OMEN / слой 3]
 
-d0a1d0bbd0b5d0b4d183d18ed189d0b8d0b920d184d0b0d0b9d0bb3a2030345f726576657273652e7478742e20d09dd0b8d0b6d0b520d188d0b5d181d182d0bdd0b0d0b4d186d0b0d182d0b5d180d0b8d187d0bdd0b0d18f205554462d3820d181d182d180d0bed0bad0b02e
+Следующий файл: 04_reverse.txt — закрыт паролем. Пароль — UTF-8, ниже в
+шестнадцатеричном виде (снять: decode hex «…»).
+
+4f4d454e2d434841494e2d4c342d524556
 
 """)
 
 add("/home/operator/Documents/puzzles/04_reverse.txt", """[OMEN / слой 4]
 
-.txt.hsabta_50 :лйаф йищюуделС .дёрепан модаз тскет ежиН
+Следующий файл: 05_atbash.txt — закрыт паролем. Строка ниже — пароль, записанный
+задом наперёд (снять: decode reverse «…»).
+
+BTA-5L-NIAHC-NEMO
 
 """)
 
 add("/home/operator/Documents/puzzles/05_atbash.txt", """[OMEN / слой 5]
 
-Кцсяугсдх нурх. Пяоруг пр-поъшсътл э zfwrg.olt (PZRIL). Фрьромя съ нпцм.
+Финальный слой. Пароль к этому файлу закодирован атбашем в строке предыдущего
+слоя (после decode reverse примените decode atbash к той же строке — получите
+ключ для cat 05_atbash.txt ПАРОЛЬ).
 
 
 ---

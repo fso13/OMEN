@@ -477,12 +477,9 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, decode, su, exit",
-        // "  iskin start → iskin ask N (до трёх), iskin done → iskin judge --live | --purge",
-        // "  __test_iskin_dialog — тест диалога; __test_end_live / __test_end_purge — тест финала",
         "  У любой команды: -help или --help (например: cat --help)",
-        // "  ls -a — скрытые файлы; ls -l — подробный список",
         "  ↑ / ↓ — предыдущие команды из истории (как в bash)",
-        "Подсказка: cat README.txt и grep KAIRO /var/log/audit.log",
+        "Подсказка: cat README.txt",
       ].join("\n")
     );
   } else if (cmd === "clear") {

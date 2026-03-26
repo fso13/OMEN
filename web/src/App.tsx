@@ -12,6 +12,7 @@ import {
 } from "./shell";
 import { IskinFaceOverlay } from "./IskinFaceOverlay";
 import { getIskinDialogBannerLines } from "./iskinConsoleBanner";
+import { getIskinHackSequenceLines } from "./iskinHackSequence";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
@@ -103,6 +104,9 @@ export function App() {
   const [iskinBannerPhase, setIskinBannerPhase] = useState(0);
   const pendingIskinLinesRef = useRef<string[] | null>(null);
   const iskinFaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [iskinHackPhase, setIskinHackPhase] = useState<"idle" | "running" | "done">("idle");
+  const iskinHackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iskinHackIdxRef = useRef(0);
   /** Навигация по истории (↑/↓): null — не в режиме истории; иначе индекс в commandHistory */
   const historyNavIndexRef = useRef<number | null>(null);
   const historyInputDraftRef = useRef("");
@@ -116,8 +120,36 @@ export function App() {
   useEffect(() => {
     return () => {
       if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+      if (iskinHackTimerRef.current) clearTimeout(iskinHackTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (iskinHackPhase !== "running") return;
+    const seq = getIskinHackSequenceLines();
+    iskinHackIdxRef.current = 0;
+    const step = () => {
+      const i = iskinHackIdxRef.current;
+      if (i >= seq.length) {
+        iskinHackTimerRef.current = null;
+        setLines([]);
+        setIskinHackPhase("done");
+        setIskinFaceVisible(true);
+        return;
+      }
+      const line = seq[i];
+      setLines((prev) => [...prev, line]);
+      iskinHackIdxRef.current = i + 1;
+      iskinHackTimerRef.current = window.setTimeout(step, 28 + Math.random() * 72);
+    };
+    step();
+    return () => {
+      if (iskinHackTimerRef.current) {
+        clearTimeout(iskinHackTimerRef.current);
+        iskinHackTimerRef.current = null;
+      }
+    };
+  }, [iskinHackPhase]);
 
   useEffect(() => {
     if (!iskinFaceVisible) return;
@@ -127,6 +159,7 @@ export function App() {
       const pending = pendingIskinLinesRef.current;
       pendingIskinLinesRef.current = null;
       setIskinFaceVisible(false);
+      setIskinHackPhase("idle");
       if (pending?.length) {
         setLines((prev) => [
           ...prev,
@@ -188,31 +221,34 @@ export function App() {
     }
   }, [bootDone]);
 
-  useEffect(() => {
-    if (!shell.iskinDialogActive) return;
-    setIskinBannerPhase(0);
-  }, [shell.iskinDialogActive]);
-
-  useEffect(() => {
-    if (!shell.iskinDialogActive || !bootDone) return;
-    const id = window.setInterval(() => {
-      setIskinBannerPhase((p) => p + 1);
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [shell.iskinDialogActive, bootDone]);
+  const showIskinBanner =
+    shell.iskinDialogActive && !iskinFaceVisible && iskinHackPhase !== "running";
 
   const iskinBannerLines = useMemo(() => {
-    if (!shell.iskinDialogActive) return [];
+    if (!showIskinBanner) return [];
     return getIskinDialogBannerLines(iskinBannerPhase).map((text) => ({
       text,
       kind: "iskin" as const,
     }));
-  }, [shell.iskinDialogActive, iskinBannerPhase]);
+  }, [showIskinBanner, iskinBannerPhase]);
 
   const displayLines = useMemo(
     () => [...iskinBannerLines, ...lines],
     [iskinBannerLines, lines]
   );
+
+  useEffect(() => {
+    if (!showIskinBanner) return;
+    setIskinBannerPhase(0);
+  }, [showIskinBanner]);
+
+  useEffect(() => {
+    if (!showIskinBanner || !bootDone) return;
+    const id = window.setInterval(() => {
+      setIskinBannerPhase((p) => p + 1);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [showIskinBanner, bootDone]);
 
   useEffect(() => {
     outRef.current?.scrollTo(0, outRef.current.scrollHeight);
@@ -282,6 +318,7 @@ export function App() {
     if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
     iskinFaceTimerRef.current = null;
     setIskinFaceVisible(false);
+    setIskinHackPhase("idle");
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -308,7 +345,7 @@ export function App() {
       pendingIskinLinesRef.current = result.deferredIskinLines;
       setLines([]);
       bannerInjectedRef.current = false;
-      setIskinFaceVisible(true);
+      setIskinHackPhase("running");
     } else if (result.clearOutput) {
       bannerInjectedRef.current = true;
       setLines(
@@ -566,7 +603,7 @@ export function App() {
                               }}
                               spellCheck={false}
                               autoCapitalize="off"
-                              disabled={shell.ended}
+                              disabled={shell.ended || iskinHackPhase === "running"}
                             />
                           </form>
                           {tabHint && (

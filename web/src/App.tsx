@@ -197,7 +197,7 @@ export function App() {
     if (!shell.iskinDialogActive || !bootDone) return;
     const id = window.setInterval(() => {
       setIskinBannerPhase((p) => p + 1);
-    }, 3000);
+    }, 1000);
     return () => window.clearInterval(id);
   }, [shell.iskinDialogActive, bootDone]);
 

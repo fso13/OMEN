@@ -155,25 +155,28 @@ body {
   font: inherit;
   font-size: 12px;
   line-height: 1.45;
-  color: #0a1a0c;
-  background: linear-gradient(180deg, #f5f0c8 0%, #e8e4b8 100%);
-  border: 1px solid rgba(80, 90, 40, 0.45);
-  border-radius: 2px;
+  color: #b8f5c8;
+  background: linear-gradient(165deg, rgba(0, 22, 10, 0.95) 0%, rgba(0, 8, 4, 0.98) 100%);
+  border: 1px solid rgba(0, 255, 65, 0.28);
+  border-radius: 3px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    2px 3px 6px rgba(0, 0, 0, 0.35);
+    inset 0 0 32px rgba(0, 40, 18, 0.35),
+    inset 0 1px 0 rgba(0, 255, 90, 0.06),
+    0 2px 10px rgba(0, 0, 0, 0.45);
   outline: none;
+  caret-color: #00ff66;
 }
 
 .notes-sticker::placeholder {
-  color: rgba(40, 50, 30, 0.45);
+  color: rgba(0, 180, 80, 0.42);
 }
 
 .notes-sticker:focus {
-  border-color: rgba(0, 255, 65, 0.35);
+  border-color: rgba(0, 255, 100, 0.5);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 0 0 1px rgba(0, 255, 65, 0.2);
+    inset 0 0 40px rgba(0, 60, 28, 0.3),
+    0 0 0 1px rgba(0, 255, 65, 0.22),
+    0 0 18px rgba(0, 255, 65, 0.12);
 }
 
 @media (max-width: 960px) {
@@ -832,10 +835,34 @@ body {
 
 .opening-mail-overlay {
   z-index: 150;
+  background: rgba(0, 8, 6, 0.78);
 }
 
+/* Стартовое / модальное письмо: та же матрица, но акцент бирюза — не сливается с cat reader */
 .opening-mail-panel {
   max-width: min(560px, 94vw);
+  background: linear-gradient(
+    155deg,
+    rgba(0, 28, 26, 0.97) 0%,
+    rgba(0, 10, 16, 0.99) 55%,
+    rgba(0, 6, 12, 1) 100%
+  );
+  border: 1px solid rgba(0, 220, 200, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 12px 40px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(0, 220, 200, 0.1),
+    inset 0 1px 0 rgba(0, 255, 230, 0.07);
+}
+
+.opening-mail-panel .reader-head {
+  background: rgba(0, 36, 34, 0.55);
+  border-bottom: 1px solid rgba(0, 255, 220, 0.22);
+}
+
+.opening-mail-panel .reader-title {
+  color: #8fefd8;
+  text-shadow: 0 0 14px rgba(0, 255, 220, 0.25);
 }
 
 .opening-mail-meta {
@@ -848,13 +875,39 @@ body {
   border-bottom: 1px solid rgba(100, 120, 140, 0.35);
 }
 
+.opening-mail-panel .opening-mail-meta {
+  color: #5cc4b0;
+  border-bottom-color: rgba(0, 200, 180, 0.28);
+}
+
 .opening-mail-body {
   max-height: min(50vh, 360px);
+}
+
+.opening-mail-panel .opening-mail-body {
+  color: #c5fff0;
+  text-shadow: 0 0 1px rgba(0, 255, 220, 0.15);
 }
 
 .opening-mail-actions {
   padding: 1rem 1.1rem 1.25rem;
   border-top: 1px solid rgba(100, 120, 140, 0.35);
+}
+
+.opening-mail-panel .opening-mail-actions {
+  border-top-color: rgba(0, 200, 180, 0.22);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 24, 22, 0.4) 100%);
+}
+
+.opening-mail-panel .end-btn {
+  color: #001810;
+  background: linear-gradient(180deg, #2ee8c8 0%, #0db896 100%);
+  border: 1px solid rgba(0, 255, 220, 0.45);
+  box-shadow: 0 0 16px rgba(0, 220, 200, 0.2);
+}
+
+.opening-mail-panel .end-btn:hover {
+  background: linear-gradient(180deg, #4ff0d4 0%, #12c9a4 100%);
 }
 
 /* Искин: полноэкранное «лицо» (SHODAN-like) */

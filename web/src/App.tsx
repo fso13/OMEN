@@ -12,7 +12,10 @@ import {
 } from "./shell";
 import { IskinFaceOverlay } from "./IskinFaceOverlay";
 import { getIskinDialogBannerLines } from "./iskinConsoleBanner";
-import { getIskinHackSequenceLines } from "./iskinHackSequence";
+import {
+  getIskinHackSequenceLines,
+  ISKIN_HACK_STEP_BOOST_MS,
+} from "./iskinHackSequence";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
@@ -140,7 +143,11 @@ export function App() {
       const line = seq[i];
       setLines((prev) => [...prev, line]);
       iskinHackIdxRef.current = i + 1;
-      iskinHackTimerRef.current = window.setTimeout(step, 28 + Math.random() * 72);
+      const wait =
+        (line.delayMs ?? 40) +
+        ISKIN_HACK_STEP_BOOST_MS +
+        (line.kind === "matrix" ? 12 : 0);
+      iskinHackTimerRef.current = window.setTimeout(step, wait);
     };
     step();
     return () => {
@@ -509,9 +516,16 @@ export function App() {
             <div className="desktop-center">
               <div className="crt-frame crt-frame--matrix">
                 <div className="crt-bezel">
-                  <div className="crt-screen">
+                  <div
+                    className={
+                      "crt-screen" + (iskinHackPhase === "running" ? " crt-screen--hack" : "")
+                    }
+                  >
                     <div className="scanlines" aria-hidden="true" />
                     <div className="crt-vignette" aria-hidden="true" />
+                    {iskinHackPhase === "running" && (
+                      <div className="matrix-rain matrix-rain--hack" aria-hidden="true" />
+                    )}
                     <div className="terminal-app">
                       <div className="boot-block">
                         {bootLines.slice(0, bootIndex).map((t, i) => (
@@ -536,7 +550,9 @@ export function App() {
                                         ? " terminal-line--banner"
                                         : ln.kind === "iskin"
                                           ? " terminal-line--iskin"
-                                          : "")
+                                          : ln.kind === "matrix"
+                                            ? " terminal-line--matrix"
+                                            : "")
                                 }
                               >
                                 {ln.text}

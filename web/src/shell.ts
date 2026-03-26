@@ -56,7 +56,9 @@ export const END_TEXT_PURGE =
 
 export interface OutputLine {
   text: string;
-  kind?: "normal" | "cmd" | "err" | "banner" | "iskin";
+  kind?: "normal" | "cmd" | "err" | "banner" | "iskin" | "matrix";
+  /** Для сцен взлома: задержка до следующей строки (мс). */
+  delayMs?: number;
 }
 
 export interface ExecResult {

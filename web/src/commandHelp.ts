@@ -12,8 +12,18 @@ function block(title: string, body: string): string {
 
 export function getCommandHelp(cmd: string, args: string[]): string | null {
   const c = cmd.toLowerCase();
-  if (c === "iskin" && (args[1] || "").toLowerCase() === "judge") {
+  const iskinSub = (args[1] || "").toLowerCase();
+  if (c === "iskin" && iskinSub === "judge") {
     return manIskinJudge();
+  }
+  if (c === "iskin" && iskinSub === "start") {
+    return manIskinStart();
+  }
+  if (c === "iskin" && iskinSub === "ask") {
+    return manIskinAsk();
+  }
+  if (c === "iskin" && iskinSub === "done") {
+    return manIskinDone();
   }
   switch (c) {
     case "help":
@@ -46,6 +56,8 @@ export function getCommandHelp(cmd: string, args: string[]): string | null {
     case "__test_end_live":
     case "__test_end_purge":
       return manTestEnd(c);
+    case "__test_iskin_dialog":
+      return manTestIskinDialog();
     default:
       return null;
   }
@@ -222,9 +234,57 @@ function manIskin(): string {
   return [
     header("iskin"),
     LINE,
-    block("ИМЯ", "iskin — внутренние подкоманды OMEN."),
-    block("СИНТАКСИС", "iskin judge --live | --purge"),
-    block("ОПИСАНИЕ", "Судьба Искина после прочтения revelation.txt. Справка по judge: iskin judge --help"),
+    block("ИМЯ", "iskin — диалог с Искином и финальный суд."),
+    block(
+      "СИНТАКСИС",
+      `iskin start     — вступление и список из пяти вопросов (сначала это)
+iskin ask N       — ответ Искина на вопрос по номеру (не более трёх за сессию)
+iskin done        — завершить диалог и открыть iskin judge
+iskin judge --live | --purge  — после revelation и завершения диалога`
+    ),
+    block(
+      "ОПИСАНИЕ",
+      "После cat revelation.txt: сначала iskin start, чтобы прочитать вступление и список, затем iskin ask N. Справки: iskin start --help, iskin ask --help..."
+    ),
+    LINE,
+  ].join("\n");
+}
+
+function manIskinStart(): string {
+  return [
+    header("iskin start"),
+    LINE,
+    block("ИМЯ", "iskin start — вступительный текст Искина и нумерованный список вопросов."),
+    block("СИНТАКСИС", "iskin start"),
+    block(
+      "ОПИСАНИЕ",
+      "Сначала длинная имитация взлома в терминале (~10–14 с: команды, логи, «сыпется» сервер, вспышки цифрового дождя), затем сброс экрана, полноэкранная загрузка «Прямой канал», потом ASCII-баннер Искина до judge. Требуется cat revelation.txt."
+    ),
+    LINE,
+  ].join("\n");
+}
+
+function manIskinAsk(): string {
+  return [
+    header("iskin ask"),
+    LINE,
+    block("ИМЯ", "iskin ask — задать один из пяти заготовленных вопросов Искину."),
+    block("СИНТАКСИС", "iskin ask N   где N — 1, 2, 3, 4 или 5"),
+    block(
+      "ОПИСАНИЕ",
+      "Только после iskin start. Можно задать не более трёх вопросов (разные номера). Требуется прочитать revelation.txt. После третьего вопроса диалог завершается автоматически; иначе введите iskin done."
+    ),
+    LINE,
+  ].join("\n");
+}
+
+function manIskinDone(): string {
+  return [
+    header("iskin done"),
+    LINE,
+    block("ИМЯ", "iskin done — закончить диалог и разрешить iskin judge."),
+    block("СИНТАКСИС", "iskin done"),
+    block("ОПИСАНИЕ", "После iskin start. После этого доступны iskin judge --live и --purge."),
     LINE,
   ].join("\n");
 }
@@ -240,6 +300,10 @@ function manIskinJudge(): string {
       `--live   оставить среду и остаток Искина
 --purge  стереть данные среды (концовка сюжета)`
     ),
+    block(
+      "ОПИСАНИЕ",
+      "Только после cat revelation.txt, iskin start и завершения диалога (iskin ask / iskin done)."
+    ),
     LINE,
   ].join("\n");
 }
@@ -253,6 +317,20 @@ function manTestEnd(cmd: string): string {
     block(
       "ОПИСАНИЕ",
       "__test_end_live — как iskin judge --live\n__test_end_purge — как iskin judge --purge"
+    ),
+    LINE,
+  ].join("\n");
+}
+
+function manTestIskinDialog(): string {
+  return [
+    header("__test_iskin_dialog"),
+    LINE,
+    block("ИМЯ", "__test_iskin_dialog — тест диалога с Искином без cat revelation."),
+    block("СИНТАКСИС", "__test_iskin_dialog"),
+    block(
+      "ОПИСАНИЕ",
+      "Помечает revelation как прочитанный и сбрасывает прогресс диалога. Дальше: iskin start, iskin ask, iskin done, iskin judge."
     ),
     LINE,
   ].join("\n");

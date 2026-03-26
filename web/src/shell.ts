@@ -11,12 +11,34 @@ import {
   reverseText,
 } from "./decodeUtils";
 import { htmlForPossibleBase64Image } from "./imageReader";
+import {
+  ISKIN_MAX_QUESTIONS,
+  ISKIN_QUESTION_IDS,
+  type IskinQuestionId,
+  iskinAnswerLines,
+  iskinMenuLines,
+  iskinPreludeDoneMessage,
+  iskinPressureAfterAnswer,
+  iskinStartLines,
+} from "./iskinDialog";
+
+export const ISKIN_FACE_DELAY_MS = 3000;
 
 export interface ShellState {
   cwd: string;
   user: string;
   ended: boolean;
   pendingSu?: boolean;
+  /** Прочитан cat'ом revelation.txt — можно начать диалог с Искином. */
+  revelationRead?: boolean;
+  /** Игрок вызвал iskin start и видел вступление + список вопросов. */
+  iskinDialogStarted?: boolean;
+  /** Номера заданных вопросов (1–5), не более ISKIN_MAX_QUESTIONS. */
+  iskinDialogAskedIds?: number[];
+  /** После iskin done — разрешён iskin judge. */
+  iskinDialogFinished?: boolean;
+  /** Прямой канал Искина: в консоли показывается ASCII-баннер до iskin judge. */
+  iskinDialogActive?: boolean;
 }
 
 export const INITIAL_SHELL: ShellState = {
@@ -34,7 +56,9 @@ export const END_TEXT_PURGE =
 
 export interface OutputLine {
   text: string;
-  kind?: "normal" | "cmd" | "err" | "banner";
+  kind?: "normal" | "cmd" | "err" | "banner" | "iskin" | "matrix";
+  /** Для сцен взлома: задержка до следующей строки (мс). */
+  delayMs?: number;
 }
 
 export interface ExecResult {
@@ -45,6 +69,10 @@ export interface ExecResult {
   endScreen?: { visible: boolean; text: string };
   /** Идентификаторы доп. писем для ящика игрока (см. extraMail.ts). */
   mailTriggers?: string[];
+  /** Полноэкранное «лицо» Искина + задержка перед deferredIskinLines. */
+  iskinFaceOverlay?: boolean;
+  /** Строки терминала после задержки (после iskin start). */
+  deferredIskinLines?: string[];
 }
 
 const BOOT_LINES = [
@@ -309,9 +337,13 @@ export function execLine(
     return { ...partial, mailTriggers: uniq.length ? uniq : undefined };
   };
 
-  push(printPromptString(state) + " " + t, "cmd");
-
   let next: ShellState = { ...state };
+  const isIskinStart = /^iskin\s+start\s*$/i.test(t);
+  const iskinStartWillSucceed =
+    isIskinStart && next.revelationRead && !next.iskinDialogFinished;
+  if (!iskinStartWillSucceed) {
+    push(printPromptString(state) + " " + t, "cmd");
+  }
 
   if (next.pendingSu) {
     next.pendingSu = false;
@@ -421,8 +453,8 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, decode, su, exit",
-        // "  iskin judge --live | --purge  (финал после revelation.txt)",
-        // "  __test_end_live / __test_end_purge — только для теста финального экрана",
+        // "  iskin start → iskin ask N (до трёх), iskin done → iskin judge --live | --purge",
+        // "  __test_iskin_dialog — тест диалога; __test_end_live / __test_end_purge — тест финала",
         "  У любой команды: -help или --help (например: cat --help)",
         // "  ls -a — скрытые файлы; ls -l — подробный список",
         "  ↑ / ↓ — предыдущие команды из истории (как в bash)",
@@ -472,6 +504,7 @@ export function execLine(
         const mt: string[] = [];
         if (normalizeAbs(target) === "/opt/contract-omen/.vault/revelation.txt") {
           mt.push("after_revelation");
+          next.revelationRead = true;
         }
         return finish({
           nextState: next,
@@ -510,8 +543,19 @@ export function execLine(
     runSu();
   } else if (cmd === "exit") {
     push("exit: нет родительской сессии (заглушка)");
+  } else if (cmd === "__test_iskin_dialog") {
+    next.revelationRead = true;
+    next.iskinDialogStarted = false;
+    next.iskinDialogAskedIds = undefined;
+    next.iskinDialogFinished = false;
+    next.iskinDialogActive = false;
+    push(
+      "[тест] revelation помечен прочитанным — iskin start, затем iskin ask до трёх раз, iskin done, iskin judge.",
+      "normal"
+    );
   } else if (cmd === "__test_end_live" || cmd === "__test_end_purge") {
     next.ended = true;
+    next.iskinDialogActive = false;
     const text = cmd === "__test_end_live" ? END_TEXT_LIVE : END_TEXT_PURGE;
     push("[тест] показ финального экрана без iskin judge", "normal");
     return finish({
@@ -521,35 +565,116 @@ export function execLine(
       mailTriggers: ["judge_moment"],
     });
   } else if (cmd === "iskin") {
-    if ((args[1] || "").toLowerCase() !== "judge") {
-      push("iskin: неизвестная подкоманда", "err");
+    const sub = (args[1] || "").toLowerCase();
+    if (sub === "start") {
+      if (!next.revelationRead) {
+        push("iskin start: сначала прочитайте /opt/contract-omen/.vault/revelation.txt (cat).", "err");
+      } else if (next.iskinDialogFinished) {
+        push("iskin start: диалог уже завершён — используйте iskin judge.", "err");
+      } else {
+        next.iskinDialogStarted = true;
+        next.iskinDialogActive = true;
+        const deferred = [
+          printPromptString(next) + " iskin start",
+          ...iskinStartLines(),
+        ];
+        return finish({
+          nextState: next,
+          lines: [],
+          clearOutput: true,
+          iskinFaceOverlay: true,
+          deferredIskinLines: deferred,
+        });
+      }
+    } else if (sub === "ask") {
+      const n = parseInt(args[2] || "", 10);
+      if (!next.revelationRead) {
+        push("iskin ask: сначала прочитайте /opt/contract-omen/.vault/revelation.txt (cat).", "err");
+      } else if (!next.iskinDialogStarted) {
+        push("iskin ask: сначала прочитайте вступление и список вопросов: iskin start", "err");
+      } else if (!Number.isFinite(n) || n < 1 || n > 5) {
+        push("iskin ask: укажите номер вопроса 1…5: iskin ask N", "err");
+      } else {
+        const qid = n as IskinQuestionId;
+        if (!ISKIN_QUESTION_IDS.includes(qid)) {
+          push("iskin ask: номер должен быть от 1 до 5.", "err");
+        } else {
+          const asked = next.iskinDialogAskedIds ?? [];
+          if (asked.includes(n)) {
+            push("Этот вопрос уже был задан.", "err");
+          } else if (asked.length >= ISKIN_MAX_QUESTIONS) {
+            push(
+              `Уже задано ${ISKIN_MAX_QUESTIONS} вопроса. Введите iskin done — затем iskin judge.`,
+              "err"
+            );
+          } else {
+            next.iskinDialogAskedIds = [...asked, n];
+            iskinAnswerLines(qid).forEach((line) => push(line));
+            iskinPressureAfterAnswer(next.iskinDialogAskedIds.length).forEach((line) =>
+              push(line)
+            );
+            if (next.iskinDialogAskedIds.length >= ISKIN_MAX_QUESTIONS) {
+              next.iskinDialogFinished = true;
+              iskinPreludeDoneMessage().forEach((line) => push(line));
+            } else {
+              iskinMenuLines(next.iskinDialogAskedIds).forEach((line) => push(line));
+            }
+          }
+        }
+      }
+    } else if (sub === "done") {
+      if (!next.revelationRead) {
+        push("iskin done: сначала прочитайте revelation.txt.", "err");
+      } else if (!next.iskinDialogStarted) {
+        push("iskin done: сначала прочитайте вступление: iskin start", "err");
+      } else {
+        next.iskinDialogFinished = true;
+        const asked = next.iskinDialogAskedIds ?? [];
+        if (asked.length === 0) {
+          push("Искин: Вы не задали ни одного вопроса — но я снимаю барьер. Решение за вами.", "normal");
+        }
+        iskinPreludeDoneMessage().forEach((line) => push(line));
+      }
+    } else if (sub === "judge") {
+      if (!next.revelationRead) {
+        push("iskin judge: сначала прочитайте revelation.txt (cat).", "err");
+      } else if (!next.iskinDialogFinished) {
+        push(
+          "iskin judge: завершите диалог — iskin start, затем iskin ask (до трёх) или iskin done.",
+          "err"
+        );
+      } else {
+        const mode = args[2];
+        if (mode === "--live") {
+          next.ended = true;
+          next.iskinDialogActive = false;
+          return finish({
+            nextState: next,
+            lines,
+            endScreen: {
+              visible: true,
+              text: END_TEXT_LIVE,
+            },
+            mailTriggers: ["judge_moment"],
+          });
+        }
+        if (mode === "--purge") {
+          next.ended = true;
+          next.iskinDialogActive = false;
+          return finish({
+            nextState: next,
+            lines,
+            endScreen: {
+              visible: true,
+              text: END_TEXT_PURGE,
+            },
+            mailTriggers: ["judge_moment"],
+          });
+        }
+        push("iskin judge: укажите --live или --purge", "err");
+      }
     } else {
-      const mode = args[2];
-      if (mode === "--live") {
-        next.ended = true;
-        return finish({
-          nextState: next,
-          lines,
-          endScreen: {
-            visible: true,
-            text: END_TEXT_LIVE,
-          },
-          mailTriggers: ["judge_moment"],
-        });
-      }
-      if (mode === "--purge") {
-        next.ended = true;
-        return finish({
-          nextState: next,
-          lines,
-          endScreen: {
-            visible: true,
-            text: END_TEXT_PURGE,
-          },
-          mailTriggers: ["judge_moment"],
-        });
-      }
-      push("iskin judge: укажите --live или --purge", "err");
+      push("iskin: подкоманды: start, ask, done, judge. См. iskin --help", "err");
     }
   } else {
     push(cmd + ": команда не найдена", "err");

@@ -30,6 +30,22 @@ export function loadGame(): PersistedGameV1 | null {
     if (data.introComplete && data.bootComplete === undefined) {
       (data as PersistedGameV1).bootComplete = true;
     }
+    const sh = data.shell;
+    if (sh.iskinDialogStarted === undefined) {
+      if (
+        sh.iskinDialogFinished ||
+        (sh.iskinDialogAskedIds && sh.iskinDialogAskedIds.length > 0)
+      ) {
+        sh.iskinDialogStarted = true;
+      }
+    }
+    if (sh.iskinDialogActive === undefined) {
+      if (sh.ended || sh.iskinDialogFinished) {
+        sh.iskinDialogActive = false;
+      } else if (sh.iskinDialogStarted) {
+        sh.iskinDialogActive = true;
+      }
+    }
     return data;
   } catch {
     return null;

@@ -6,9 +6,16 @@ import {
   getBootLines,
   getTerminalBannerLines,
   getPromptParts,
+  ISKIN_FACE_DELAY_MS,
   type OutputLine,
   type ShellState,
 } from "./shell";
+import { IskinFaceOverlay } from "./IskinFaceOverlay";
+import { getIskinDialogBannerLines } from "./iskinConsoleBanner";
+import {
+  getIskinHackSequenceLines,
+  ISKIN_HACK_STEP_BOOST_MS,
+} from "./iskinHackSequence";
 import { VFS_FILES } from "./vfsData";
 import { OPENING_MAIL } from "./openingEmail";
 import { EXTRA_MAILS, getExtraMailById } from "./extraMail";
@@ -96,6 +103,13 @@ export function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerInjectedRef = useRef(false);
+  const [iskinFaceVisible, setIskinFaceVisible] = useState(false);
+  const [iskinBannerPhase, setIskinBannerPhase] = useState(0);
+  const pendingIskinLinesRef = useRef<string[] | null>(null);
+  const iskinFaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [iskinHackPhase, setIskinHackPhase] = useState<"idle" | "running" | "done">("idle");
+  const iskinHackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iskinHackIdxRef = useRef(0);
   /** Навигация по истории (↑/↓): null — не в режиме истории; иначе индекс в commandHistory */
   const historyNavIndexRef = useRef<number | null>(null);
   const historyInputDraftRef = useRef("");
@@ -105,6 +119,69 @@ export function App() {
   useEffect(() => {
     bannerInjectedRef.current = false;
   }, [bootSession]);
+
+  useEffect(() => {
+    return () => {
+      if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+      if (iskinHackTimerRef.current) clearTimeout(iskinHackTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (iskinHackPhase !== "running") return;
+    const seq = getIskinHackSequenceLines();
+    iskinHackIdxRef.current = 0;
+    const step = () => {
+      const i = iskinHackIdxRef.current;
+      if (i >= seq.length) {
+        iskinHackTimerRef.current = null;
+        setLines([]);
+        setIskinHackPhase("done");
+        setIskinFaceVisible(true);
+        return;
+      }
+      const line = seq[i];
+      setLines((prev) => [...prev, line]);
+      iskinHackIdxRef.current = i + 1;
+      const wait =
+        (line.delayMs ?? 40) +
+        ISKIN_HACK_STEP_BOOST_MS +
+        (line.kind === "matrix" ? 12 : 0);
+      iskinHackTimerRef.current = window.setTimeout(step, wait);
+    };
+    step();
+    return () => {
+      if (iskinHackTimerRef.current) {
+        clearTimeout(iskinHackTimerRef.current);
+        iskinHackTimerRef.current = null;
+      }
+    };
+  }, [iskinHackPhase]);
+
+  useEffect(() => {
+    if (!iskinFaceVisible) return;
+    if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+    iskinFaceTimerRef.current = window.setTimeout(() => {
+      iskinFaceTimerRef.current = null;
+      const pending = pendingIskinLinesRef.current;
+      pendingIskinLinesRef.current = null;
+      setIskinFaceVisible(false);
+      setIskinHackPhase("idle");
+      if (pending?.length) {
+        setLines((prev) => [
+          ...prev,
+          ...pending.map((text) => ({ text, kind: "normal" as const })),
+        ]);
+      }
+      inputRef.current?.focus();
+    }, ISKIN_FACE_DELAY_MS);
+    return () => {
+      if (iskinFaceTimerRef.current) {
+        clearTimeout(iskinFaceTimerRef.current);
+        iskinFaceTimerRef.current = null;
+      }
+    };
+  }, [iskinFaceVisible]);
 
   useEffect(() => {
     if (!bootDone || !introComplete) return;
@@ -151,9 +228,38 @@ export function App() {
     }
   }, [bootDone]);
 
+  const showIskinBanner =
+    shell.iskinDialogActive && !iskinFaceVisible && iskinHackPhase !== "running";
+
+  const iskinBannerLines = useMemo(() => {
+    if (!showIskinBanner) return [];
+    return getIskinDialogBannerLines(iskinBannerPhase).map((text) => ({
+      text,
+      kind: "iskin" as const,
+    }));
+  }, [showIskinBanner, iskinBannerPhase]);
+
+  const displayLines = useMemo(
+    () => [...iskinBannerLines, ...lines],
+    [iskinBannerLines, lines]
+  );
+
+  useEffect(() => {
+    if (!showIskinBanner) return;
+    setIskinBannerPhase(0);
+  }, [showIskinBanner]);
+
+  useEffect(() => {
+    if (!showIskinBanner || !bootDone) return;
+    const id = window.setInterval(() => {
+      setIskinBannerPhase((p) => p + 1);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [showIskinBanner, bootDone]);
+
   useEffect(() => {
     outRef.current?.scrollTo(0, outRef.current.scrollHeight);
-  }, [lines, bootIndex]);
+  }, [displayLines, bootIndex]);
 
   useEffect(() => {
     if (!introComplete) return;
@@ -215,6 +321,11 @@ export function App() {
     setMailModal(null);
     historyNavIndexRef.current = null;
     historyInputDraftRef.current = "";
+    pendingIskinLinesRef.current = null;
+    if (iskinFaceTimerRef.current) clearTimeout(iskinFaceTimerRef.current);
+    iskinFaceTimerRef.current = null;
+    setIskinFaceVisible(false);
+    setIskinHackPhase("idle");
   }, []);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -237,7 +348,12 @@ export function App() {
     }
     const newMailIds = (result.mailTriggers ?? []).filter((id) => !prevUnlocked.includes(id));
 
-    if (result.clearOutput) {
+    if (result.iskinFaceOverlay && result.deferredIskinLines?.length) {
+      pendingIskinLinesRef.current = result.deferredIskinLines;
+      setLines([]);
+      bannerInjectedRef.current = false;
+      setIskinHackPhase("running");
+    } else if (result.clearOutput) {
       bannerInjectedRef.current = true;
       setLines(
         getTerminalBannerLines().map((text) => ({ text, kind: "banner" as const }))
@@ -328,6 +444,7 @@ export function App() {
 
   return (
     <>
+      <IskinFaceOverlay visible={iskinFaceVisible} />
       {!introComplete && (
         <div
           className="reader-overlay opening-mail-overlay"
@@ -399,9 +516,16 @@ export function App() {
             <div className="desktop-center">
               <div className="crt-frame crt-frame--matrix">
                 <div className="crt-bezel">
-                  <div className="crt-screen">
+                  <div
+                    className={
+                      "crt-screen" + (iskinHackPhase === "running" ? " crt-screen--hack" : "")
+                    }
+                  >
                     <div className="scanlines" aria-hidden="true" />
                     <div className="crt-vignette" aria-hidden="true" />
+                    {iskinHackPhase === "running" && (
+                      <div className="matrix-rain matrix-rain--hack" aria-hidden="true" />
+                    )}
                     <div className="terminal-app">
                       <div className="boot-block">
                         {bootLines.slice(0, bootIndex).map((t, i) => (
@@ -413,7 +537,7 @@ export function App() {
                       {bootDone && (
                         <div className="terminal-body">
                           <pre ref={outRef} className="terminal-scroll" tabIndex={-1}>
-                            {lines.map((ln, i) => (
+                            {displayLines.map((ln, i) => (
                               <div
                                 key={i}
                                 className={
@@ -424,7 +548,11 @@ export function App() {
                                       ? " terminal-line--err"
                                       : ln.kind === "banner"
                                         ? " terminal-line--banner"
-                                        : "")
+                                        : ln.kind === "iskin"
+                                          ? " terminal-line--iskin"
+                                          : ln.kind === "matrix"
+                                            ? " terminal-line--matrix"
+                                            : "")
                                 }
                               >
                                 {ln.text}
@@ -491,7 +619,7 @@ export function App() {
                               }}
                               spellCheck={false}
                               autoCapitalize="off"
-                              disabled={shell.ended}
+                              disabled={shell.ended || iskinHackPhase === "running"}
                             />
                           </form>
                           {tabHint && (

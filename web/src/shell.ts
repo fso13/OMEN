@@ -453,8 +453,8 @@ export function execLine(
       [
         "Доступные команды:",
         "  help, clear, history, whoami, pwd, cd, ls [-l] [-a], cat, grep, decode, su, exit",
-        "  iskin start → iskin ask N (до трёх), iskin done → iskin judge --live | --purge",
-        "  __test_iskin_dialog — тест диалога; __test_end_live / __test_end_purge — тест финала",
+        // "  iskin start → iskin ask N (до трёх), iskin done → iskin judge --live | --purge",
+        // "  __test_iskin_dialog — тест диалога; __test_end_live / __test_end_purge — тест финала",
         "  У любой команды: -help или --help (например: cat --help)",
         // "  ls -a — скрытые файлы; ls -l — подробный список",
         "  ↑ / ↓ — предыдущие команды из истории (как в bash)",

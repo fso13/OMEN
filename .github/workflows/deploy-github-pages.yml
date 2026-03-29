@@ -31,14 +31,14 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: omen/package-lock.json
 
       - name: Install dependencies
-        working-directory: web
+        working-directory: omen
         run: npm ci
 
       - name: Build
-        working-directory: web
+        working-directory: omen
         env:
           # Подкаталог Pages для project site: https://<user>.github.io/<repo>/
           GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
@@ -47,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: web/dist
+          path: omen/dist
 
   deploy:
     needs: build

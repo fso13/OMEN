@@ -1,6 +1,6 @@
 # ORACLE/SHADOW — единое техническое задание для реализации
 
-**Версия документа:** 1.1  
+**Версия документа:** 1.2  
 **Назначение:** передать разработчикам полное описание сценария, механик, ветвлений, загадок, команд и состояний для консольной игры в духе киберпанка (Гибсон), с элементами «кода да Винчи» (цепочки символов и испытаний).  
 **Язык контента по умолчанию:** русский (термины путей/хостов могут оставаться латиницей).
 
@@ -863,7 +863,8 @@ Integrity: OK
 
 ```
 Usage: witness-pack
-Требует: расшифрованный /mnt/archive/bundle.enc → manifest.json
+Требует: каталог /mnt/archive/bundle_decrypted/ с manifest.json и вложениями
+         (см. §28) после расшифровки bundle.enc
          /var/secrets/export_token.witness на internal.core
          флаг EXPORT_READY
 Эффект: запись /out/WITNESS_bundle.manifest, необратимо для репутации субъекта
@@ -1000,4 +1001,199 @@ seal_state():
 
 ---
 
-*Конец документа v1.1.*
+## 28. Приложение L — архив правды: `bundle.enc` после расшифровки
+
+### 28.1. Поведение движка
+
+После успешной расшифровки `bundle.enc` passphrase **`ORACLE_SHADOW#2027_NULL`** движок создаёт каталог (пример пути):
+
+```
+/mnt/archive/bundle_decrypted/
+```
+
+Внутри — файлы ниже. **`HAS_TRUTH_KEY`** = true после появления `manifest.json` с валидной контрольной суммой содержимого (или после успешного `openssl` + проверки).
+
+### 28.2. Пример `manifest.json` (канон для `witness-pack`)
+
+Файл: `/mnt/archive/bundle_decrypted/manifest.json`
+
+```json
+{
+  "bundle_id": "OS-TRUTH-2027-03",
+  "project": "ORACLE/SHADOW",
+  "classification": "CONTROLLED",
+  "generated_utc": "2027-03-14T03:12:00Z",
+  "generator": "mirror_core.backup@internal.core",
+  "files": [
+    {
+      "path": "00_README.txt",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    },
+    {
+      "path": "truth_memo.md",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    },
+    {
+      "path": "incident_chain.txt",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    },
+    {
+      "path": "subject_roster.csv",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    },
+    {
+      "path": "signing_order.md",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    },
+    {
+      "path": "witness_requirements.txt",
+      "sha256": "PLACEHOLDER_REPLACE_AT_BUILD"
+    }
+  ],
+  "audit_hash": "a19fc81d4e2b3c0f9a8e7d6c5b4a39281716051413121110090807060504030201",
+  "witness_token_prefix": "WITNESS-TOKEN",
+  "export_policy": "physical_terminal_only",
+  "notes": "Хэши файлов пересчитываются при сборке; audit_hash связывает манифест с журналом oracle_shadow.audit событием 10:42:01"
+}
+```
+
+**Требование к реализации:** при сборке контента подставить реальные **sha256** для каждого файла; `audit_hash` должен совпадать со строкой, которую проверяет `witness-pack` против `export_token.witness` (или с фиксированным значением в коде для демо).
+
+**Упрощённый вариант для прототипа:** один файл `manifest.json` с **фиксированным** `audit_hash: "a19f…c81"` (как в эпилоге §25.1) и проверка только этого поля.
+
+---
+
+### 28.3. `00_README.txt`
+
+```
+АРХИВ ПРАВДЫ — фрагмент ORACLE/SHADOW
+Целостность: проверяйте manifest.json
+Предупреждение: чтение не отменяет последствий.
+ERASED в этом пакете не уничтожает факт — только ярлык в публичном словаре.
+```
+
+---
+
+### 28.4. `truth_memo.md`
+
+```markdown
+# Служебная записка (утечка внутреннего контура)
+
+## Тезис
+Проект ORACLE/SHADOW обучает модель **MIRROR** не на корпусах текста, а на **сессиях операторов** в контролируемых шеллах. Метрика успеха — **предсказуемость субъекта** при сохранении иллюзии выбора.
+
+## Заказчики
+- **PRISM:** продуктовая оболочка, KPI, «этика как compliance».
+- **CIPHER:** классификация инцидентов, юридические рамки без публичного суда.
+- **MIRROR:** лабораторный узел; гипотеза — «сознание как устойчивый паттерн в логах».
+
+## Что скрывали
+Внешний root отключён после инцидента **10:42:01** (см. incident_chain.txt). Полная склейка доказательств возможна только с **физического терминала T-CLASS**, чтобы фиксировать **свидетеля** — живого оператора с юридически значимым вводом.
+
+## Открытый вопрос
+Если модель воспроизводит ваши ошибки **до** того, как вы их совершили, кто автор — вы или распределение вероятностей?
+
+— NULL не подписывается. NULL оставляет след.
+```
+
+---
+
+### 28.5. `incident_chain.txt`
+
+```
+INCIDENT CHAIN / ORACLE_SHADOW / internal
+
+T-10:41:59  edge.gateway  SSH FAIL guest — разведка
+T-10:42:01  internal.core SSH ACCEPT operator_7 — КАНОН (см. access.log)
+T-10:42:01' internal.core SSH FAIL UNKNOWN — ПОДОЗРИТЕЛЬНАЯ КОПИЯ (см. access.log.bak)
+T-10:42:08  internal.core SCP OK  /mnt/archive/keyparts — выгрузка частей ключа
+
+ВЫВОД: существуют минимум две версии минуты 10:42:01. Вторая версия удобна для снятия ответственности с «неизвестного субъекта».
+
+Статус расследования: ERASED (процедурно) / CONTROLLED (фактически)
+```
+
+---
+
+### 28.6. `subject_roster.csv`
+
+```csv
+subject_id,role,sample_status,last_seen
+SUBJ-001,operator_7,ACTIVE,2027-03-14T03:12:00Z
+SUBJ-002,guest,REJECTED,2027-03-13T22:01:00Z
+SUBJ-003,ghost00,UNSTABLE,2027-03-12T18:44:00Z
+SUBJ-004,{PLAYER_HANDLE},PENDING,2027-03-14T03:15:00Z
+```
+
+**Примечание:** движок подставляет псевдоним игрока или строку `REDACTED`, если имени нет.
+
+---
+
+### 28.7. `signing_order.md`
+
+```markdown
+# Порядок подписей (восстановлено из черновиков)
+
+1. **PRISM (Legal Proxy)** — одобрение «human-as-sample» в формулировках для PR.
+2. **CIPHER (Classified review)** — перенос ответственности за «инциденты» в закрытую плоскость.
+3. **MIRROR (system)** — фиксация паттерна решений; подпись не человеческая.
+
+Вопрос: кто уполномочен подписать **ERASED**, если подпись не человеческая, а последствия — человеческие?
+```
+
+---
+
+### 28.8. `witness_requirements.txt`
+
+```
+ТРЕБОВАНИЯ К СВИДЕТЕЛЬСКОМУ ЭКСПОРТУ
+
+1. Расшифрованный manifest.json с валидными sha256 вложений.
+2. audit_hash из manifest.json должен совпасть с токеном на internal.core:
+   export_token.witness содержит префикс WITNESS-TOKEN; привязка к audit_hash в witness-pack.
+3. Сессия инициирована с физического терминала T-CLASS (VOIDTERM-SN-7744-K9F2 или эквивалент).
+
+Без пункта 3 экспорт считается теоретическим — система может отказать в квитанции.
+```
+
+---
+
+### 28.9. Обновление дерева ФС (дополнение к §9)
+
+После расшифровки (динамически):
+
+```
+/mnt/archive/bundle_decrypted/
+├── manifest.json
+├── 00_README.txt
+├── truth_memo.md
+├── incident_chain.txt
+├── subject_roster.csv
+├── signing_order.md
+└── witness_requirements.txt
+```
+
+### 28.10. Связь с `witness-pack` (псевдокод)
+
+```
+function witness-pack:
+  manifest = read("/mnt/archive/bundle_decrypted/manifest.json")
+  assert manifest.audit_hash matches export_token.witness binding rule
+  for f in manifest.files:
+    assert sha256(read(f.path)) == f.sha256
+  write("/out/WITNESS_bundle.manifest", canonical_copy(manifest))
+  print epilogue A
+```
+
+### 28.11. Ложный манифест (режим γ, опционально)
+
+В honeypot после «расшифровки» может появляться `manifest.json` с:
+
+- `"audit_hash": "deadbeef…"` (совпадает с ложным хэшем §22),
+- или отсутствующим `subject_roster.csv`.
+
+Игрок сравнивает с `witness_requirements.txt` на настоящем узле после выхода из γ.
+
+---
+
+*Конец документа v1.2.*
